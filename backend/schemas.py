@@ -1,0 +1,526 @@
+from datetime import date, datetime
+
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+
+FORMAS_PAGAMENTO = ["Dinheiro", "Pix", "Cartão Débito", "Cartão Crédito", "Outro"]
+FORMA_PAGAMENTO_AV = "AV"
+FORMA_CARTAO_CREDITO = "Cartão Crédito"
+FORMAS_PAGAMENTO_VENDA = ["Dinheiro", "Pix", "Cartão Débito", FORMA_CARTAO_CREDITO, FORMA_PAGAMENTO_AV, "Outro"]
+
+CATEGORIAS_SAIDA = [
+    "Fornecedor",
+    "Aluguel",
+    "Salários",
+    "Alimentação",
+    "Energia/Água",
+    "Transporte",
+    "Manutenção",
+    "Impostos",
+    "Marketing",
+    "Outro",
+]
+
+
+class ItemVendaBase(BaseModel):
+    produto: str = Field(..., min_length=1, max_length=200)
+    quantidade: int = Field(default=1, ge=1)
+    valor_unitario: float = Field(..., ge=0)
+    desconto: float = Field(default=0.0, ge=0)
+
+
+class ItemVendaCreate(ItemVendaBase):
+    pass
+
+
+class ItemVendaUpdate(ItemVendaBase):
+    id: int | None = None
+
+
+class ItemVendaResponse(ItemVendaBase):
+    id: int
+    valor: float
+
+    model_config = {"from_attributes": True}
+
+
+class VendaBase(BaseModel):
+    data: datetime | None = None
+    cliente: str = Field(default="Cliente avulso", max_length=200)
+    forma_pagamento: str
+    troco: float | None = Field(default=None, ge=0)
+    valor_recebido: float | None = Field(default=None, ge=0)
+    parcelas: int | None = Field(default=None, ge=1, le=24)
+    observacao: str | None = Field(default=None, max_length=500)
+
+    @field_validator("forma_pagamento")
+    @classmethod
+    def validar_forma_pagamento(cls, value: str) -> str:
+        if value not in FORMAS_PAGAMENTO_VENDA:
+            raise ValueError(f"Forma de pagamento inválida. Opções: {', '.join(FORMAS_PAGAMENTO_VENDA)}")
+        return value
+
+
+class VendaCreate(VendaBase):
+    itens: list[ItemVendaCreate] = Field(default_factory=list, min_length=0)
+    produto: str | None = Field(default=None, max_length=200)
+    quantidade: int | None = Field(default=None, ge=1)
+    valor_unitario: float | None = Field(default=None, ge=0)
+    desconto: float | None = Field(default=None, ge=0)
+
+    @model_validator(mode="after")
+    def montar_itens(self) -> "VendaCreate":
+        if self.forma_pagamento == FORMA_CARTAO_CREDITO:
+            if self.parcelas is None or self.parcelas < 1:
+                raise ValueError("Informe o número de parcelas para cartão de crédito")
+        elif self.parcelas is not None:
+            object.__setattr__(self, "parcelas", None)
+
+        if self.itens:
+            return self
+        if self.produto:
+            self.itens = [
+                ItemVendaCreate(
+                    produto=self.produto,
+                    quantidade=self.quantidade or 1,
+                    valor_unitario=self.valor_unitario or 0,
+                    desconto=self.desconto or 0,
+                )
+            ]
+            return self
+        raise ValueError("Informe pelo menos um item na venda")
+
+
+class VendaUpdate(BaseModel):
+    data: datetime | None = None
+    cliente: str | None = Field(default=None, max_length=200)
+    forma_pagamento: str | None = None
+    troco: float | None = Field(default=None, ge=0)
+    valor_recebido: float | None = Field(default=None, ge=0)
+    parcelas: int | None = Field(default=None, ge=1, le=24)
+    observacao: str | None = Field(default=None, max_length=500)
+    itens: list[ItemVendaUpdate] | None = None
+    produto: str | None = Field(default=None, min_length=1, max_length=200)
+    quantidade: int | None = Field(default=None, ge=1)
+    valor_unitario: float | None = Field(default=None, ge=0)
+    desconto: float | None = Field(default=None, ge=0)
+
+    @field_validator("forma_pagamento")
+    @classmethod
+    def validar_forma_pagamento(cls, value: str | None) -> str | None:
+        if value is not None and value not in FORMAS_PAGAMENTO_VENDA:
+            raise ValueError(f"Forma de pagamento inválida. Opções: {', '.join(FORMAS_PAGAMENTO_VENDA)}")
+        return value
+
+    @model_validator(mode="after")
+    def validar_parcelas_credito(self):
+        forma = self.forma_pagamento
+        if forma is None:
+            return self
+        if forma == FORMA_CARTAO_CREDITO:
+            if self.parcelas is None or self.parcelas < 1:
+                raise ValueError("Informe o número de parcelas para cartão de crédito")
+        elif self.parcelas is not None:
+            object.__setattr__(self, "parcelas", None)
+        return self
+
+
+class ImportacaoErro(BaseModel):
+    linha: int
+    mensagem: str
+    produto: str | None = None
+
+
+class ImportacaoIgnorada(BaseModel):
+    linha: int
+    id: int | None = None
+    produto: str | None = None
+    motivo: str
+
+
+class ImportacaoResultado(BaseModel):
+    importadas: int
+    ignoradas: int
+    erros: list[ImportacaoErro]
+    detalhes_ignoradas: list[ImportacaoIgnorada]
+    colunas_detectadas: list[str]
+
+
+class VendaResponse(VendaBase):
+    id: int
+    data: datetime
+    valor: float
+    produto: str
+    quantidade: int
+    valor_unitario: float
+    desconto: float
+    itens: list[ItemVendaResponse] = Field(default_factory=list)
+
+    model_config = {"from_attributes": True}
+
+    @model_validator(mode="after")
+    def normalizar_parcelas_legado(self):
+        """Vendas antigas em crédito podem não ter parcelas gravadas."""
+        if self.forma_pagamento == FORMA_CARTAO_CREDITO and self.parcelas is None:
+            object.__setattr__(self, "parcelas", 1)
+        return self
+
+
+class MediaVendaResponse(BaseModel):
+    media: float
+    total: float
+    quantidade: int
+    descricao_periodo: str
+
+
+class DashboardKPIs(BaseModel):
+    total_vendas: float
+    quantidade_vendas: int
+    ticket_medio: float
+    total_descontos: float
+    total_itens: int
+    total_saidas: float
+    quantidade_saidas: int
+    saldo: float
+    descricao_periodo: str
+    melhor_dia: str | None = None
+    melhor_dia_total: float = 0
+    melhor_dia_quantidade: int = 0
+    vendas_hoje: float = 0
+    vendas_mes: float = 0
+    crescimento_mes: float = 0
+    saidas_hoje: float = 0
+    saidas_mes: float = 0
+    saldo_mes: float = 0
+
+
+class DiaVendasResumo(BaseModel):
+    data: str | None = None
+    total: float
+    quantidade: int
+
+
+class ResumoPeriodo(BaseModel):
+    descricao: str
+    data_inicio: datetime
+    data_fim: datetime
+    faturamento: float
+    quantidade_vendas: int
+    total_saidas: float
+    quantidade_saidas: int
+    saldo: float
+    ticket_medio: float
+    total_itens: int
+    dias_com_venda: int
+    melhor_dia: DiaVendasResumo
+    top_dias_vendas: list[DiaVendasResumo]
+
+
+class ComparacaoMetrica(BaseModel):
+    chave: str
+    label: str
+    periodo_a: float
+    periodo_b: float
+    variacao_pct: float | None = None
+
+
+class ConfrontarPeriodosResponse(BaseModel):
+    periodo_a: ResumoPeriodo
+    periodo_b: ResumoPeriodo
+    comparacoes: list[ComparacaoMetrica]
+
+
+class SaidaBase(BaseModel):
+    data: datetime | None = None
+    descricao: str = Field(..., min_length=1, max_length=200)
+    categoria: str
+    valor: float = Field(..., gt=0)
+    forma_pagamento: str
+    observacao: str | None = Field(default=None, max_length=500)
+
+    @field_validator("forma_pagamento")
+    @classmethod
+    def validar_forma_pagamento(cls, value: str) -> str:
+        if value not in FORMAS_PAGAMENTO:
+            raise ValueError(f"Forma de pagamento inválida. Opções: {', '.join(FORMAS_PAGAMENTO)}")
+        return value
+
+    @field_validator("categoria")
+    @classmethod
+    def validar_categoria(cls, value: str) -> str:
+        if value not in CATEGORIAS_SAIDA:
+            raise ValueError(f"Categoria inválida. Opções: {', '.join(CATEGORIAS_SAIDA)}")
+        return value
+
+
+class SaidaCreate(SaidaBase):
+    pass
+
+
+class SaidaUpdate(BaseModel):
+    data: datetime | None = None
+    descricao: str | None = Field(default=None, min_length=1, max_length=200)
+    categoria: str | None = None
+    valor: float | None = Field(default=None, gt=0)
+    forma_pagamento: str | None = None
+    observacao: str | None = Field(default=None, max_length=500)
+
+    @field_validator("forma_pagamento")
+    @classmethod
+    def validar_forma_pagamento(cls, value: str | None) -> str | None:
+        if value is not None and value not in FORMAS_PAGAMENTO:
+            raise ValueError(f"Forma de pagamento inválida. Opções: {', '.join(FORMAS_PAGAMENTO)}")
+        return value
+
+    @field_validator("categoria")
+    @classmethod
+    def validar_categoria(cls, value: str | None) -> str | None:
+        if value is not None and value not in CATEGORIAS_SAIDA:
+            raise ValueError(f"Categoria inválida. Opções: {', '.join(CATEGORIAS_SAIDA)}")
+        return value
+
+
+class SaidaResponse(SaidaBase):
+    id: int
+    data: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class SaidaPorPeriodo(BaseModel):
+    periodo: str
+    total: float
+    quantidade: int
+
+
+class SaidaPorCategoria(BaseModel):
+    categoria: str
+    total: float
+    quantidade: int
+
+
+class VendaPorPeriodo(BaseModel):
+    periodo: str
+    total: float
+    quantidade: int
+
+
+class VendaPorFormaPagamento(BaseModel):
+    forma_pagamento: str
+    total: float
+    quantidade: int
+
+
+class TopItem(BaseModel):
+    nome: str
+    total: float
+    quantidade: int
+
+
+class VendaAVResumo(BaseModel):
+    id: int
+    data: datetime
+    cliente: str
+    produto: str
+    valor: float
+
+
+class VendasAVPendentes(BaseModel):
+    quantidade: int
+    total: float
+    vendas: list[VendaAVResumo]
+
+
+class CaixaVendaPorForma(BaseModel):
+    forma_pagamento: str
+    total: float
+
+
+class CaixaResumoSistema(BaseModel):
+    faturamento: float
+    quantidade_vendas: int
+    vendas_dinheiro: float
+    total_saidas: float
+    quantidade_saidas: int
+    saidas_dinheiro: float
+    vendas_por_forma: list[CaixaVendaPorForma]
+
+
+class CaixaAberturaCreate(BaseModel):
+    data: date
+    valor_inicial: float = Field(..., ge=0)
+    observacao: str | None = Field(default=None, max_length=500)
+
+
+class CaixaFechamentoCreate(BaseModel):
+    data: date
+    valor_fechamento: float = Field(..., ge=0)
+    observacao: str | None = Field(default=None, max_length=500)
+
+
+class CaixaDiarioResponse(BaseModel):
+    id: int | None = None
+    data: date
+    valor_inicial: float | None = None
+    valor_fechamento: float | None = None
+    fechado_em: datetime | None = None
+    observacao_abertura: str | None = None
+    observacao_fechamento: str | None = None
+    aberto: bool = False
+    fechado: bool = False
+    resumo_sistema: CaixaResumoSistema
+    saldo_esperado: float | None = None
+    diferenca: float | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class CaixaDiarioListItem(BaseModel):
+    id: int
+    data: date
+    valor_inicial: float
+    valor_fechamento: float | None
+    fechado_em: datetime | None
+    saldo_esperado: float | None
+    diferenca: float | None
+    faturamento: float
+
+
+CATEGORIAS_PRODUTO = [
+    "Geral",
+    "Velas",
+    "Terços",
+    "Imagens",
+    "Livros",
+    "Decoração",
+    "Acessórios",
+    "Outro",
+]
+
+TIPOS_MOVIMENTACAO_MANUAL = ["entrada", "saida", "ajuste"]
+
+
+class ProdutoBase(BaseModel):
+    nome: str = Field(..., min_length=1, max_length=200)
+    categoria: str = Field(default="Geral", max_length=50)
+    preco_venda: float = Field(default=0.0, ge=0)
+    estoque_atual: int = Field(default=0, ge=0)
+    estoque_minimo: int = Field(default=0, ge=0)
+    unidade: str = Field(default="un", max_length=20)
+    ativo: bool = True
+    observacao: str | None = Field(default=None, max_length=500)
+
+    @field_validator("categoria")
+    @classmethod
+    def validar_categoria_produto(cls, value: str) -> str:
+        if value not in CATEGORIAS_PRODUTO:
+            raise ValueError(f"Categoria inválida. Opções: {', '.join(CATEGORIAS_PRODUTO)}")
+        return value
+
+
+class ProdutoCreate(ProdutoBase):
+    pass
+
+
+class ProdutoUpdate(BaseModel):
+    nome: str | None = Field(default=None, min_length=1, max_length=200)
+    categoria: str | None = None
+    preco_venda: float | None = Field(default=None, ge=0)
+    estoque_minimo: int | None = Field(default=None, ge=0)
+    unidade: str | None = Field(default=None, max_length=20)
+    ativo: bool | None = None
+    observacao: str | None = Field(default=None, max_length=500)
+
+    @field_validator("categoria")
+    @classmethod
+    def validar_categoria_produto(cls, value: str | None) -> str | None:
+        if value is not None and value not in CATEGORIAS_PRODUTO:
+            raise ValueError(f"Categoria inválida. Opções: {', '.join(CATEGORIAS_PRODUTO)}")
+        return value
+
+
+class ProdutoResponse(ProdutoBase):
+    id: int
+    nome_normalizado: str
+    criado_em: datetime
+    atualizado_em: datetime
+    status_estoque: str = "ok"
+
+    model_config = {"from_attributes": True}
+
+
+class ProdutoOpcao(BaseModel):
+    id: int
+    nome: str
+    preco_venda: float
+    estoque_atual: int
+    categoria: str
+
+
+class MovimentacaoEstoqueCreate(BaseModel):
+    produto_id: int
+    tipo: str
+    quantidade: int = Field(..., ge=0)
+    observacao: str | None = Field(default=None, max_length=500)
+
+    @field_validator("tipo")
+    @classmethod
+    def validar_tipo(cls, value: str) -> str:
+        if value not in TIPOS_MOVIMENTACAO_MANUAL:
+            raise ValueError(
+                f"Tipo inválido. Opções: {', '.join(TIPOS_MOVIMENTACAO_MANUAL)}"
+            )
+        return value
+
+    @model_validator(mode="after")
+    def validar_quantidade_por_tipo(self):
+        if self.tipo == "ajuste":
+            if self.quantidade < 0:
+                raise ValueError("Estoque ajustado não pode ser negativo")
+        elif self.quantidade < 1:
+            raise ValueError("Quantidade deve ser pelo menos 1")
+        return self
+
+
+class MovimentacaoEstoqueResponse(BaseModel):
+    id: int
+    produto_id: int
+    produto_nome: str
+    tipo: str
+    quantidade: int
+    estoque_anterior: int
+    estoque_posterior: int
+    venda_id: int | None
+    observacao: str | None
+    data: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class EstoqueResumo(BaseModel):
+    total_produtos: int
+    produtos_ativos: int
+    produtos_estoque_baixo: int
+    produtos_sem_estoque: int
+    valor_total_estoque: float
+    total_unidades: int
+
+
+class ImportacaoNFeItemResultado(BaseModel):
+    numero_item: int
+    produto: str
+    quantidade: int
+    acao: str
+    produto_id: int | None = None
+    estoque_posterior: int | None = None
+
+
+class ImportacaoNFeResultado(BaseModel):
+    nota_numero: str | None = None
+    nota_serie: str | None = None
+    emitente: str | None = None
+    itens_processados: int
+    produtos_criados: int
+    total_unidades: int
+    itens: list[ImportacaoNFeItemResultado]
+    erros: list[str]

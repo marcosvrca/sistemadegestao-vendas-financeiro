@@ -1,0 +1,261 @@
+import type { LucideIcon } from 'lucide-react'
+import {
+  LayoutDashboard,
+  GitCompare,
+  ShoppingCart,
+  PlusCircle,
+  FileSpreadsheet,
+  Package,
+  Boxes,
+  ArrowDownUp,
+  FileCode2,
+  Wallet,
+  ArrowDownCircle,
+  ArrowUpCircle,
+  TrendingUp,
+  Users,
+  Truck,
+  Tags,
+  BarChart3,
+} from 'lucide-react'
+
+export type Pagina =
+  | 'dashboard'
+  | 'confrontar'
+  | 'vendas'
+  | 'nova-venda'
+  | 'importar-vendas'
+  | 'produtos'
+  | 'estoque-resumo'
+  | 'estoque-movimentacoes'
+  | 'estoque-importar-xml'
+  | 'caixa'
+  | 'contas-a-pagar'
+  | 'contas-a-receber'
+  | 'fluxo-caixa'
+  | 'cadastro-clientes'
+  | 'cadastro-fornecedores'
+  | 'cadastro-categorias'
+  | 'relatorios'
+
+export interface NavItem {
+  id: Pagina
+  label: string
+  icon: LucideIcon
+  emBreve?: boolean
+}
+
+export interface NavSection {
+  id: string
+  label: string
+  items: NavItem[]
+}
+
+export const NAV_SECOES: NavSection[] = [
+  {
+    id: 'inicio',
+    label: 'Início',
+    items: [
+      { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { id: 'confrontar', label: 'Confrontar Dados', icon: GitCompare },
+    ],
+  },
+  {
+    id: 'vendas',
+    label: 'Vendas',
+    items: [
+      { id: 'vendas', label: 'Lista de Vendas', icon: ShoppingCart },
+      { id: 'nova-venda', label: 'Nova Venda', icon: PlusCircle },
+      { id: 'importar-vendas', label: 'Importar Planilha', icon: FileSpreadsheet },
+    ],
+  },
+  {
+    id: 'produtos',
+    label: 'Produtos',
+    items: [
+      { id: 'produtos', label: 'Catálogo de Produtos', icon: Package },
+    ],
+  },
+  {
+    id: 'estoque',
+    label: 'Estoque',
+    items: [
+      { id: 'estoque-resumo', label: 'Visão Geral', icon: Boxes },
+      { id: 'estoque-movimentacoes', label: 'Movimentações', icon: ArrowDownUp },
+      { id: 'estoque-importar-xml', label: 'Importar XML (NF-e)', icon: FileCode2 },
+    ],
+  },
+  {
+    id: 'financeiro',
+    label: 'Financeiro',
+    items: [
+      { id: 'caixa', label: 'Caixa', icon: Wallet },
+      { id: 'contas-a-pagar', label: 'Contas a Pagar', icon: ArrowDownCircle },
+      { id: 'contas-a-receber', label: 'Contas a Receber', icon: ArrowUpCircle, emBreve: true },
+      { id: 'fluxo-caixa', label: 'Fluxo de Caixa', icon: TrendingUp, emBreve: true },
+    ],
+  },
+  {
+    id: 'cadastros',
+    label: 'Cadastros',
+    items: [
+      { id: 'cadastro-clientes', label: 'Clientes', icon: Users, emBreve: true },
+      { id: 'cadastro-fornecedores', label: 'Fornecedores', icon: Truck, emBreve: true },
+      { id: 'cadastro-categorias', label: 'Categorias', icon: Tags, emBreve: true },
+    ],
+  },
+  {
+    id: 'relatorios',
+    label: 'Relatórios',
+    items: [
+      { id: 'relatorios', label: 'Relatórios Gerais', icon: BarChart3, emBreve: true },
+    ],
+  },
+]
+
+export const PAGINA_TITULOS: Record<Pagina, string> = {
+  dashboard: 'Dashboard',
+  confrontar: 'Confrontar Dados',
+  vendas: 'Vendas',
+  'nova-venda': 'Nova Venda',
+  'importar-vendas': 'Importar Vendas',
+  produtos: 'Catálogo de Produtos',
+  'estoque-resumo': 'Visão do Estoque',
+  'estoque-movimentacoes': 'Movimentações de Estoque',
+  'estoque-importar-xml': 'Importar XML da NF-e',
+  caixa: 'Caixa',
+  'contas-a-pagar': 'Contas a Pagar',
+  'contas-a-receber': 'Contas a Receber',
+  'fluxo-caixa': 'Fluxo de Caixa',
+  'cadastro-clientes': 'Clientes',
+  'cadastro-fornecedores': 'Fornecedores',
+  'cadastro-categorias': 'Categorias',
+  relatorios: 'Relatórios',
+}
+
+export const PAGINA_SUBTITULOS: Partial<Record<Pagina, string>> = {
+  dashboard: 'Resumo de vendas, saídas e indicadores',
+  confrontar: 'Compare dois períodos lado a lado',
+  vendas: 'Histórico e gestão de vendas',
+  'nova-venda': 'Registre uma nova venda',
+  'importar-vendas': 'Importe vendas a partir de planilha Excel',
+  produtos: 'Cadastro, preços e níveis de estoque',
+  'estoque-resumo': 'Indicadores e alertas de estoque',
+  'estoque-movimentacoes': 'Entradas, saídas e histórico',
+  'estoque-importar-xml': 'Entrada automática via nota fiscal',
+  caixa: 'Abertura, fechamento e conferência do dia',
+  'contas-a-pagar': 'Despesas e obrigações a pagar',
+  'contas-a-receber': 'Recebimentos e cobranças',
+  'fluxo-caixa': 'Entradas e saídas consolidadas',
+  'cadastro-clientes': 'Cadastro de clientes',
+  'cadastro-fornecedores': 'Cadastro de fornecedores',
+  'cadastro-categorias': 'Categorias de produtos e despesas',
+  relatorios: 'Análises e exportações',
+}
+
+export interface EmBreveConfig {
+  titulo: string
+  descricao: string
+  recursosPrevistos: string[]
+  paginasRelacionadas?: { pagina: Pagina; label: string }[]
+}
+
+export const EM_BREVE_CONFIG: Partial<Record<Pagina, EmBreveConfig>> = {
+  'contas-a-receber': {
+    titulo: 'Contas a Receber',
+    descricao:
+      'Módulo para controlar vendas a prazo, vendas AV pendentes, recebimentos e inadimplência.',
+    recursosPrevistos: [
+      'Lista de títulos a receber por cliente',
+      'Baixa de recebimentos (Pix, dinheiro, cartão)',
+      'Integração com vendas AV',
+      'Alertas de vencimento',
+    ],
+    paginasRelacionadas: [
+      { pagina: 'vendas', label: 'Ver vendas' },
+      { pagina: 'dashboard', label: 'Dashboard' },
+    ],
+  },
+  'fluxo-caixa': {
+    titulo: 'Fluxo de Caixa',
+    descricao: 'Visão consolidada de entradas e saídas por período, com projeção e saldo acumulado.',
+    recursosPrevistos: [
+      'Gráfico de entradas × saídas',
+      'Saldo projetado',
+      'Filtro por forma de pagamento',
+      'Exportação para Excel',
+    ],
+    paginasRelacionadas: [
+      { pagina: 'caixa', label: 'Caixa diário' },
+      { pagina: 'contas-a-pagar', label: 'Contas a pagar' },
+    ],
+  },
+  'cadastro-clientes': {
+    titulo: 'Clientes',
+    descricao: 'Cadastro centralizado de clientes para vendas, histórico e contas a receber.',
+    recursosPrevistos: [
+      'Nome, contato e observações',
+      'Histórico de compras',
+      'Vínculo com vendas AV',
+    ],
+    paginasRelacionadas: [{ pagina: 'vendas', label: 'Vendas' }],
+  },
+  'cadastro-fornecedores': {
+    titulo: 'Fornecedores',
+    descricao: 'Cadastro de fornecedores para compras, NF-e e contas a pagar.',
+    recursosPrevistos: [
+      'Dados do fornecedor e CNPJ',
+      'Histórico de notas importadas',
+      'Vínculo com contas a pagar',
+    ],
+    paginasRelacionadas: [
+      { pagina: 'estoque-importar-xml', label: 'Importar XML' },
+      { pagina: 'contas-a-pagar', label: 'Contas a pagar' },
+    ],
+  },
+  'cadastro-categorias': {
+    titulo: 'Categorias',
+    descricao: 'Gestão unificada de categorias de produtos e de despesas.',
+    recursosPrevistos: [
+      'Categorias de produtos',
+      'Categorias de saídas/despesas',
+      'Ativar e desativar categorias',
+    ],
+    paginasRelacionadas: [
+      { pagina: 'produtos', label: 'Produtos' },
+      { pagina: 'contas-a-pagar', label: 'Contas a pagar' },
+    ],
+  },
+  relatorios: {
+    titulo: 'Relatórios Gerais',
+    descricao: 'Relatórios gerenciais de vendas, estoque e financeiro.',
+    recursosPrevistos: [
+      'Vendas por período e produto',
+      'Posição de estoque',
+      'DRE simplificado',
+      'Exportação PDF e Excel',
+    ],
+    paginasRelacionadas: [
+      { pagina: 'dashboard', label: 'Dashboard' },
+      { pagina: 'confrontar', label: 'Confrontar dados' },
+    ],
+  },
+}
+
+export type EstoqueSecao = 'produtos' | 'movimentacoes' | 'importar-xml'
+
+export function paginaParaSecaoEstoque(pagina: Pagina): EstoqueSecao | null {
+  if (pagina === 'produtos') return 'produtos'
+  if (pagina === 'estoque-movimentacoes') return 'movimentacoes'
+  if (pagina === 'estoque-importar-xml') return 'importar-xml'
+  return null
+}
+
+export function isPaginaEmBreve(pagina: Pagina): boolean {
+  return Boolean(EM_BREVE_CONFIG[pagina])
+}
+
+export function secaoIdDaPagina(pagina: Pagina): string {
+  const secao = NAV_SECOES.find((s) => s.items.some((i) => i.id === pagina))
+  return secao?.id ?? NAV_SECOES[0].id
+}

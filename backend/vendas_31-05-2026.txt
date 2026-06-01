@@ -1,0 +1,43 @@
+id	data	valor	forma_pag	quantidade	desconto	produto	valor_recebido	troco	cliente	observacao
+1	31/05/2026	R$ 28,50	pix	1	2,50	imagem carro				
+2	31/05/2026	R$ 30,90	debito	1		colar				
+2	31/05/2026	R$ 30,90	debito	1		imagem santo eon				
+3	31/05/2026	R$ 20,00	dinheiro	1		colar				
+4	31/05/2026	R$ 20,00	pix	1		pulseira terço				
+5	31/05/2026	R$ 112,80	dinheiro	1		colar	150	37,5		
+5	31/05/2026	R$ 40,00	pix	1		colar				
+6	31/05/2026	R$ 75,00	pix	1		pulseira terço				
+7	31/05/2026	R$ 45,00	pix	1		oratorio nossa senhora				
+8	31/05/2026	R$ 50,00	pix	2		pulseira terço				
+9	31/05/2026	R$ 50,00	debito	2		pulseira terço				
+10	31/05/2026	R$ 50,00	pix	2		pulseira terço				
+11	31/05/2026	R$ 50,00	pix	2		terço				
+12	31/05/2026	R$ 135,00	pix	1		biblia				
+13	31/05/2026	R$ 25,00	debito	1		pulseira terço				
+14	31/05/2026	R$ 28,90	debito	1		terço infantil				
+15	31/05/2026	R$ 35,00	debito	1		pulseira terço				
+16	31/05/2026	R$ 15,00	pix	1		chaveiro				
+16	31/05/2026	R$ 30,00	pix	1		pulseira terço				
+17	31/05/2026	R$ 35,00	debito	1		pulseira terço				
+18	31/05/2026	R$ 30,00	credito	1		pulseira				
+19	31/05/2026	R$ 30,00	credito	1		pulseira terço				
+20	31/05/2026	R$ 20,00	debito	1		escapulario				
+21	31/05/2026	R$ 15,00	debito	1		pulseira				
+21	31/05/2026	R$ 35,00	debito	1		pulseira terço				
+22	31/05/2026	R$ 20,00	debito	1		escapulario				
+23	31/05/2026	R$ 30,00	debito	1		terço				
+23	31/05/2026	R$ 30,00	debito	1		pulseira terço				
+24	31/05/2026	R$ 18,90	dinheiro	1		terço infantil				
+24	31/05/2026	R$ 30,00	dinheiro	1		suporte carro nossa senhora				
+24	31/05/2026	R$ 12,00	dinheiro	1		terço infantil				
+25	31/05/2026	R$ 20,90	pix	1		vela de pulha				
+26	31/05/2026	R$ 45,00	dinheiro	1		capela pedra				
+27	31/05/2026	R$ 18,90	debito	1		terço infantil				
+28	31/05/2026	R$ 30,00	AV	1		pulseira terço			Tatinha
+29	31/05/2026	R$ 30,00	pix	1		pulseira terço				
+30	31/05/2026	R$ 20,00	pix	1		escapulario				
+31	31/05/2026	R$ 180,00	credito 3x	1		suporte de vela				
+32	31/05/2026	R$ 30,00	credito	1		pulseira terço				
+33	31/05/2026	R$ 75,00	credito	1		vela com pedra				
+34	31/05/2026	R$ 15,90	pix	1		crucifixo				
+35	31/05/2026	R$ 28,90	AV	1		CRMSB			Erivania

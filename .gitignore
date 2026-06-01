@@ -1,0 +1,38 @@
+# Python
+backend/venv/
+backend/__pycache__/
+**/__pycache__/
+*.py[cod]
+*.pyo
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Banco local (cada máquina gera o seu)
+backend/*.db
+backend/*.db-journal
+
+# Node
+frontend/node_modules/
+frontend/dist/
+*.local
+
+# Ambiente e IDE
+.env
+.env.*
+!.env.example
+.vscode/
+.idea/
+.cursor/
+*.log
+
+# SO
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Testes / temporários
+backend/_test_*.py
+*.tmp
