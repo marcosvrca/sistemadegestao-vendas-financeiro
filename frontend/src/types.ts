@@ -249,6 +249,137 @@ export interface CaixaFechamentoCreate {
   observacao?: string
 }
 
+export interface ContaRecorrente {
+  id: number
+  cliente: string
+  descricao: string
+  valor: number
+  dia_vencimento: number
+  frequencia: string
+  ativo: boolean
+  observacao?: string | null
+  criado_em: string
+}
+
+export interface ContaRecorrenteCreate {
+  cliente: string
+  descricao: string
+  valor: number
+  dia_vencimento: number
+  frequencia: string
+  ativo?: boolean
+  observacao?: string
+}
+
+export interface ContaReceber {
+  id: number
+  cliente: string
+  descricao: string
+  valor: number
+  data_vencimento: string
+  status: 'pendente' | 'recebido'
+  forma_pagamento?: string | null
+  data_recebimento?: string | null
+  recorrente_id?: number | null
+  referencia_mes?: string | null
+  observacao?: string | null
+  criado_em: string
+}
+
+export interface ContaReceberCreate {
+  cliente: string
+  descricao: string
+  valor: number
+  data_vencimento: string
+  observacao?: string
+}
+
+export interface ContasReceberResumo {
+  quantidade_av: number
+  total_av: number
+  quantidade_contas: number
+  total_contas: number
+  quantidade_total: number
+  total_geral: number
+}
+
+export interface GerarCobrancasResultado {
+  geradas: number
+  ignoradas: number
+  contas: ContaReceber[]
+}
+
+export interface ContaPagarRecorrente {
+  id: number
+  fornecedor: string
+  descricao: string
+  categoria: string
+  valor: number
+  dia_vencimento: number
+  frequencia: string
+  ativo: boolean
+  is_dda: boolean
+  observacao?: string | null
+  criado_em: string
+}
+
+export interface ContaPagarRecorrenteCreate {
+  fornecedor: string
+  descricao: string
+  categoria: string
+  valor: number
+  dia_vencimento: number
+  frequencia: string
+  ativo?: boolean
+  is_dda?: boolean
+  observacao?: string
+}
+
+export interface ContaPagar {
+  id: number
+  fornecedor: string
+  descricao: string
+  categoria: string
+  valor: number
+  data_vencimento: string
+  status: 'pendente' | 'pago'
+  is_dda: boolean
+  linha_digitavel?: string | null
+  forma_pagamento?: string | null
+  data_pagamento?: string | null
+  recorrente_id?: number | null
+  referencia_mes?: string | null
+  saida_id?: number | null
+  observacao?: string | null
+  criado_em: string
+}
+
+export interface ContaPagarCreate {
+  fornecedor: string
+  descricao: string
+  categoria: string
+  valor: number
+  data_vencimento: string
+  is_dda?: boolean
+  linha_digitavel?: string
+  observacao?: string
+}
+
+export interface ContasPagarResumo {
+  quantidade_pendente: number
+  total_pendente: number
+  quantidade_dda: number
+  total_dda: number
+  quantidade_vencidas: number
+  total_vencidas: number
+}
+
+export interface GerarContasPagarResultado {
+  geradas: number
+  ignoradas: number
+  contas: ContaPagar[]
+}
+
 export interface DiaVendasResumo {
   data: string | null
   total: number

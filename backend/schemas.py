@@ -534,3 +534,255 @@ class ImportacaoNFeResultado(BaseModel):
     total_unidades: int
     itens: list[ImportacaoNFeItemResultado]
     erros: list[str]
+
+
+FREQUENCIAS_RECORRENTE = ["Mensal", "Trimestral", "Semestral", "Anual"]
+STATUS_CONTA_RECEBER = ["pendente", "recebido"]
+
+
+class ContaRecorrenteBase(BaseModel):
+    cliente: str = Field(..., min_length=1, max_length=200)
+    descricao: str = Field(..., min_length=1, max_length=200)
+    valor: float = Field(..., gt=0)
+    dia_vencimento: int = Field(..., ge=1, le=28)
+    frequencia: str = Field(default="Mensal")
+    ativo: bool = True
+    observacao: str | None = Field(default=None, max_length=500)
+
+    @field_validator("frequencia")
+    @classmethod
+    def validar_frequencia(cls, value: str) -> str:
+        if value not in FREQUENCIAS_RECORRENTE:
+            raise ValueError(f"Frequência inválida. Opções: {', '.join(FREQUENCIAS_RECORRENTE)}")
+        return value
+
+
+class ContaRecorrenteCreate(ContaRecorrenteBase):
+    pass
+
+
+class ContaRecorrenteUpdate(BaseModel):
+    cliente: str | None = Field(default=None, min_length=1, max_length=200)
+    descricao: str | None = Field(default=None, min_length=1, max_length=200)
+    valor: float | None = Field(default=None, gt=0)
+    dia_vencimento: int | None = Field(default=None, ge=1, le=28)
+    frequencia: str | None = None
+    ativo: bool | None = None
+    observacao: str | None = Field(default=None, max_length=500)
+
+    @field_validator("frequencia")
+    @classmethod
+    def validar_frequencia(cls, value: str | None) -> str | None:
+        if value is not None and value not in FREQUENCIAS_RECORRENTE:
+            raise ValueError(f"Frequência inválida. Opções: {', '.join(FREQUENCIAS_RECORRENTE)}")
+        return value
+
+
+class ContaRecorrenteResponse(ContaRecorrenteBase):
+    id: int
+    criado_em: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ContaReceberBase(BaseModel):
+    cliente: str = Field(..., min_length=1, max_length=200)
+    descricao: str = Field(..., min_length=1, max_length=200)
+    valor: float = Field(..., gt=0)
+    data_vencimento: date
+    observacao: str | None = Field(default=None, max_length=500)
+
+
+class ContaReceberCreate(ContaReceberBase):
+    pass
+
+
+class ContaReceberUpdate(BaseModel):
+    cliente: str | None = Field(default=None, min_length=1, max_length=200)
+    descricao: str | None = Field(default=None, min_length=1, max_length=200)
+    valor: float | None = Field(default=None, gt=0)
+    data_vencimento: date | None = None
+    observacao: str | None = Field(default=None, max_length=500)
+
+
+class ContaReceberBaixa(BaseModel):
+    forma_pagamento: str
+
+    @field_validator("forma_pagamento")
+    @classmethod
+    def validar_forma_pagamento(cls, value: str) -> str:
+        if value not in FORMAS_PAGAMENTO:
+            raise ValueError(f"Forma de pagamento inválida. Opções: {', '.join(FORMAS_PAGAMENTO)}")
+        return value
+
+
+class ContaReceberResponse(ContaReceberBase):
+    id: int
+    status: str
+    forma_pagamento: str | None = None
+    data_recebimento: datetime | None = None
+    recorrente_id: int | None = None
+    referencia_mes: str | None = None
+    criado_em: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ContasReceberResumo(BaseModel):
+    quantidade_av: int
+    total_av: float
+    quantidade_contas: int
+    total_contas: float
+    quantidade_total: int
+    total_geral: float
+
+
+class GerarCobrancasResultado(BaseModel):
+    geradas: int
+    ignoradas: int
+    contas: list[ContaReceberResponse]
+
+
+STATUS_CONTA_PAGAR = ["pendente", "pago"]
+
+
+class ContaPagarRecorrenteBase(BaseModel):
+    fornecedor: str = Field(..., min_length=1, max_length=200)
+    descricao: str = Field(..., min_length=1, max_length=200)
+    categoria: str
+    valor: float = Field(..., gt=0)
+    dia_vencimento: int = Field(..., ge=1, le=28)
+    frequencia: str = Field(default="Mensal")
+    ativo: bool = True
+    is_dda: bool = False
+    observacao: str | None = Field(default=None, max_length=500)
+
+    @field_validator("frequencia")
+    @classmethod
+    def validar_frequencia(cls, value: str) -> str:
+        if value not in FREQUENCIAS_RECORRENTE:
+            raise ValueError(f"Frequência inválida. Opções: {', '.join(FREQUENCIAS_RECORRENTE)}")
+        return value
+
+    @field_validator("categoria")
+    @classmethod
+    def validar_categoria(cls, value: str) -> str:
+        if value not in CATEGORIAS_SAIDA:
+            raise ValueError(f"Categoria inválida. Opções: {', '.join(CATEGORIAS_SAIDA)}")
+        return value
+
+
+class ContaPagarRecorrenteCreate(ContaPagarRecorrenteBase):
+    pass
+
+
+class ContaPagarRecorrenteUpdate(BaseModel):
+    fornecedor: str | None = Field(default=None, min_length=1, max_length=200)
+    descricao: str | None = Field(default=None, min_length=1, max_length=200)
+    categoria: str | None = None
+    valor: float | None = Field(default=None, gt=0)
+    dia_vencimento: int | None = Field(default=None, ge=1, le=28)
+    frequencia: str | None = None
+    ativo: bool | None = None
+    is_dda: bool | None = None
+    observacao: str | None = Field(default=None, max_length=500)
+
+    @field_validator("frequencia")
+    @classmethod
+    def validar_frequencia(cls, value: str | None) -> str | None:
+        if value is not None and value not in FREQUENCIAS_RECORRENTE:
+            raise ValueError(f"Frequência inválida. Opções: {', '.join(FREQUENCIAS_RECORRENTE)}")
+        return value
+
+    @field_validator("categoria")
+    @classmethod
+    def validar_categoria(cls, value: str | None) -> str | None:
+        if value is not None and value not in CATEGORIAS_SAIDA:
+            raise ValueError(f"Categoria inválida. Opções: {', '.join(CATEGORIAS_SAIDA)}")
+        return value
+
+
+class ContaPagarRecorrenteResponse(ContaPagarRecorrenteBase):
+    id: int
+    criado_em: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ContaPagarBase(BaseModel):
+    fornecedor: str = Field(..., min_length=1, max_length=200)
+    descricao: str = Field(..., min_length=1, max_length=200)
+    categoria: str
+    valor: float = Field(..., gt=0)
+    data_vencimento: date
+    is_dda: bool = False
+    linha_digitavel: str | None = Field(default=None, max_length=100)
+    observacao: str | None = Field(default=None, max_length=500)
+
+    @field_validator("categoria")
+    @classmethod
+    def validar_categoria(cls, value: str) -> str:
+        if value not in CATEGORIAS_SAIDA:
+            raise ValueError(f"Categoria inválida. Opções: {', '.join(CATEGORIAS_SAIDA)}")
+        return value
+
+
+class ContaPagarCreate(ContaPagarBase):
+    pass
+
+
+class ContaPagarUpdate(BaseModel):
+    fornecedor: str | None = Field(default=None, min_length=1, max_length=200)
+    descricao: str | None = Field(default=None, min_length=1, max_length=200)
+    categoria: str | None = None
+    valor: float | None = Field(default=None, gt=0)
+    data_vencimento: date | None = None
+    is_dda: bool | None = None
+    linha_digitavel: str | None = Field(default=None, max_length=100)
+    observacao: str | None = Field(default=None, max_length=500)
+
+    @field_validator("categoria")
+    @classmethod
+    def validar_categoria(cls, value: str | None) -> str | None:
+        if value is not None and value not in CATEGORIAS_SAIDA:
+            raise ValueError(f"Categoria inválida. Opções: {', '.join(CATEGORIAS_SAIDA)}")
+        return value
+
+
+class ContaPagarBaixa(BaseModel):
+    forma_pagamento: str
+
+    @field_validator("forma_pagamento")
+    @classmethod
+    def validar_forma_pagamento(cls, value: str) -> str:
+        if value not in FORMAS_PAGAMENTO:
+            raise ValueError(f"Forma de pagamento inválida. Opções: {', '.join(FORMAS_PAGAMENTO)}")
+        return value
+
+
+class ContaPagarResponse(ContaPagarBase):
+    id: int
+    status: str
+    forma_pagamento: str | None = None
+    data_pagamento: datetime | None = None
+    recorrente_id: int | None = None
+    referencia_mes: str | None = None
+    saida_id: int | None = None
+    criado_em: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ContasPagarResumo(BaseModel):
+    quantidade_pendente: int
+    total_pendente: float
+    quantidade_dda: int
+    total_dda: float
+    quantidade_vencidas: int
+    total_vencidas: float
+
+
+class GerarContasPagarResultado(BaseModel):
+    geradas: int
+    ignoradas: int
+    contas: list[ContaPagarResponse]

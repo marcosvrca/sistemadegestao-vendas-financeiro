@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ChevronDown, Cross, X } from 'lucide-react'
-import type { Pagina } from '../navigation'
-import { NAV_SECOES, secaoIdDaPagina } from '../navigation'
+import type { NavItem, Pagina } from '../navigation'
+import { NAV_SECOES, grupoIdDaPagina, itemContemPagina, secaoIdDaPagina } from '../navigation'
 import { ThemeToggle } from './ThemeToggle'
 
 interface SidebarProps {
@@ -15,9 +15,23 @@ function criarExpandidasIniciais(pagina: Pagina): Set<string> {
   return new Set([secaoIdDaPagina(pagina)])
 }
 
+function criarGruposExpandidosIniciais(pagina: Pagina): Set<string> {
+  const grupos = new Set<string>()
+  const grupo = grupoIdDaPagina(pagina)
+  if (grupo) grupos.add(grupo)
+  return grupos
+}
+
+function grupoTemPaginaAtiva(item: NavItem, pagina: Pagina): boolean {
+  return item.children?.some((sub) => sub.id === pagina) ?? false
+}
+
 export function Sidebar({ paginaAtual, onNavigate, aberto, onFechar }: SidebarProps) {
   const [expandidas, setExpandidas] = useState<Set<string>>(() =>
     criarExpandidasIniciais(paginaAtual),
+  )
+  const [gruposExpandidos, setGruposExpandidos] = useState<Set<string>>(() =>
+    criarGruposExpandidosIniciais(paginaAtual),
   )
 
   useEffect(() => {
@@ -26,6 +40,17 @@ export function Sidebar({ paginaAtual, onNavigate, aberto, onFechar }: SidebarPr
       if (prev.has(id)) return prev
       const next = new Set(prev)
       next.add(id)
+      return next
+    })
+  }, [paginaAtual])
+
+  useEffect(() => {
+    const grupo = grupoIdDaPagina(paginaAtual)
+    if (!grupo) return
+    setGruposExpandidos((prev) => {
+      if (prev.has(grupo)) return prev
+      const next = new Set(prev)
+      next.add(grupo)
       return next
     })
   }, [paginaAtual])
@@ -39,9 +64,79 @@ export function Sidebar({ paginaAtual, onNavigate, aberto, onFechar }: SidebarPr
     })
   }
 
+  function toggleGrupo(groupId: string) {
+    setGruposExpandidos((prev) => {
+      const next = new Set(prev)
+      if (next.has(groupId)) next.delete(groupId)
+      else next.add(groupId)
+      return next
+    })
+  }
+
   function secaoTemPaginaAtiva(secaoId: string) {
     const secao = NAV_SECOES.find((s) => s.id === secaoId)
-    return secao?.items.some((i) => i.id === paginaAtual) ?? false
+    return secao?.items.some((i) => itemContemPagina(i, paginaAtual)) ?? false
+  }
+
+  function renderNavItem(item: NavItem) {
+    if (item.children && item.groupId) {
+      const grupoAberto = gruposExpandidos.has(item.groupId)
+      const grupoAtivo = grupoTemPaginaAtiva(item, paginaAtual)
+      const Icon = item.icon
+
+      return (
+        <div
+          key={item.groupId}
+          className={`nav-item-group ${grupoAberto ? 'expanded' : ''} ${grupoAtivo ? 'has-active' : ''}`}
+        >
+          <button
+            type="button"
+            className="nav-item-group-toggle nav-item nav-item-nested"
+            onClick={() => toggleGrupo(item.groupId!)}
+            aria-expanded={grupoAberto}
+          >
+            <span className="nav-item-icon">
+              <Icon size={18} />
+            </span>
+            <span className="nav-item-label">{item.label}</span>
+            <ChevronDown size={16} className="nav-item-group-chevron" aria-hidden />
+          </button>
+          <div className="nav-item-subitems" hidden={!grupoAberto}>
+            {item.children.map(({ id, label, icon: SubIcon }) => (
+              <button
+                key={id}
+                type="button"
+                className={`nav-item nav-item-sub ${paginaAtual === id ? 'active' : ''}`}
+                onClick={() => onNavigate(id)}
+              >
+                <span className="nav-item-icon">
+                  <SubIcon size={16} />
+                </span>
+                <span className="nav-item-label">{label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )
+    }
+
+    if (!item.id) return null
+
+    const Icon = item.icon
+    return (
+      <button
+        key={item.id}
+        type="button"
+        className={`nav-item nav-item-nested ${paginaAtual === item.id ? 'active' : ''}`}
+        onClick={() => onNavigate(item.id!)}
+      >
+        <span className="nav-item-icon">
+          <Icon size={18} />
+        </span>
+        <span className="nav-item-label">{item.label}</span>
+        {item.emBreve && <span className="nav-item-badge">Em breve</span>}
+      </button>
+    )
   }
 
   return (
@@ -91,20 +186,7 @@ export function Sidebar({ paginaAtual, onNavigate, aberto, onFechar }: SidebarPr
                 className="sidebar-section-items"
                 hidden={!aberta}
               >
-                {secao.items.map(({ id, label, icon: Icon, emBreve }) => (
-                  <button
-                    key={id}
-                    type="button"
-                    className={`nav-item nav-item-nested ${paginaAtual === id ? 'active' : ''}`}
-                    onClick={() => onNavigate(id)}
-                  >
-                    <span className="nav-item-icon">
-                      <Icon size={18} />
-                    </span>
-                    <span className="nav-item-label">{label}</span>
-                    {emBreve && <span className="nav-item-badge">Em breve</span>}
-                  </button>
-                ))}
+                {secao.items.map((item) => renderNavItem(item))}
               </div>
             </div>
           )

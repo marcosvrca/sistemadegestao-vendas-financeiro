@@ -28,6 +28,10 @@ def get_db():
 def migrar_banco() -> None:
     from models import (  # noqa: F401
         CaixaDiario,
+        ContaPagar,
+        ContaPagarRecorrente,
+        ContaReceber,
+        ContaRecorrente,
         ItemVenda,
         MovimentacaoEstoque,
         Produto,

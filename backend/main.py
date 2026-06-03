@@ -56,6 +56,8 @@ from dashboard_confrontar import confrontar_periodos, obter_melhor_dia
 from av_utils import registrar_quitacao_av
 from venda_utils import calcular_valor_item, normalizar_data_venda, sincronizar_cabecalho
 from estoque_api import router as estoque_router
+from contas_receber_api import router as contas_receber_router
+from contas_pagar_api import router as contas_pagar_router
 from estoque_utils import (
     aplicar_itens_venda_estoque,
     estornar_itens_venda_estoque,
@@ -67,6 +69,8 @@ migrar_banco()
 
 app = FastAPI(title="Recanto da Fé - Sistema de Vendas")
 app.include_router(estoque_router)
+app.include_router(contas_receber_router)
+app.include_router(contas_pagar_router)
 
 app.add_middleware(
     CORSMiddleware,

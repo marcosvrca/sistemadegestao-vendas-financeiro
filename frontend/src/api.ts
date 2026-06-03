@@ -28,6 +28,18 @@ import type {
   CaixaDiarioListItem,
   CaixaAberturaCreate,
   CaixaFechamentoCreate,
+  ContaReceber,
+  ContaReceberCreate,
+  ContaRecorrente,
+  ContaRecorrenteCreate,
+  ContasReceberResumo,
+  GerarCobrancasResultado,
+  ContaPagar,
+  ContaPagarCreate,
+  ContaPagarRecorrente,
+  ContaPagarRecorrenteCreate,
+  ContasPagarResumo,
+  GerarContasPagarResultado,
 } from './types'
 
 const API = '/api'
@@ -246,4 +258,126 @@ export const api = {
       data_b_fim: params.data_b_fim,
     })}`,
   ),
+
+  getFrequenciasRecorrente: () => fetchJson<string[]>(`${API}/frequencias-recorrente`),
+
+  getContasReceberResumo: () =>
+    fetchJson<ContasReceberResumo>(`${API}/contas-receber/resumo`),
+
+  getContasReceber: (params?: Record<string, string>) =>
+    fetchJson<ContaReceber[]>(`${API}/contas-receber${queryString(params)}`),
+
+  createContaReceber: (dados: ContaReceberCreate) =>
+    fetchJson<ContaReceber>(`${API}/contas-receber`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dados),
+    }),
+
+  updateContaReceber: (id: number, dados: Partial<ContaReceberCreate>) =>
+    fetchJson<ContaReceber>(`${API}/contas-receber/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dados),
+    }),
+
+  baixarContaReceber: (id: number, forma_pagamento: string) =>
+    fetchJson<ContaReceber>(`${API}/contas-receber/${id}/baixa`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ forma_pagamento }),
+    }),
+
+  deleteContaReceber: (id: number) =>
+    fetchJson<void>(`${API}/contas-receber/${id}`, { method: 'DELETE' }),
+
+  getContasRecorrentes: (params?: Record<string, string>) =>
+    fetchJson<ContaRecorrente[]>(`${API}/contas-recorrentes${queryString(params)}`),
+
+  createContaRecorrente: (dados: ContaRecorrenteCreate) =>
+    fetchJson<ContaRecorrente>(`${API}/contas-recorrentes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dados),
+    }),
+
+  updateContaRecorrente: (id: number, dados: Partial<ContaRecorrenteCreate>) =>
+    fetchJson<ContaRecorrente>(`${API}/contas-recorrentes/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dados),
+    }),
+
+  deleteContaRecorrente: (id: number) =>
+    fetchJson<void>(`${API}/contas-recorrentes/${id}`, { method: 'DELETE' }),
+
+  gerarCobrancaRecorrente: (id: number) =>
+    fetchJson<ContaReceber>(`${API}/contas-recorrentes/${id}/gerar-cobranca`, {
+      method: 'POST',
+    }),
+
+  gerarCobrancasMes: () =>
+    fetchJson<GerarCobrancasResultado>(`${API}/contas-recorrentes/gerar-cobrancas-mes`, {
+      method: 'POST',
+    }),
+
+  getContasPagarResumo: () =>
+    fetchJson<ContasPagarResumo>(`${API}/contas-pagar/resumo`),
+
+  getContasPagar: (params?: Record<string, string>) =>
+    fetchJson<ContaPagar[]>(`${API}/contas-pagar${queryString(params)}`),
+
+  createContaPagar: (dados: ContaPagarCreate) =>
+    fetchJson<ContaPagar>(`${API}/contas-pagar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dados),
+    }),
+
+  updateContaPagar: (id: number, dados: Partial<ContaPagarCreate>) =>
+    fetchJson<ContaPagar>(`${API}/contas-pagar/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dados),
+    }),
+
+  baixarContaPagar: (id: number, forma_pagamento: string) =>
+    fetchJson<ContaPagar>(`${API}/contas-pagar/${id}/baixa`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ forma_pagamento }),
+    }),
+
+  deleteContaPagar: (id: number) =>
+    fetchJson<void>(`${API}/contas-pagar/${id}`, { method: 'DELETE' }),
+
+  getContasPagarRecorrentes: (params?: Record<string, string>) =>
+    fetchJson<ContaPagarRecorrente[]>(`${API}/contas-pagar-recorrentes${queryString(params)}`),
+
+  createContaPagarRecorrente: (dados: ContaPagarRecorrenteCreate) =>
+    fetchJson<ContaPagarRecorrente>(`${API}/contas-pagar-recorrentes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dados),
+    }),
+
+  updateContaPagarRecorrente: (id: number, dados: Partial<ContaPagarRecorrenteCreate>) =>
+    fetchJson<ContaPagarRecorrente>(`${API}/contas-pagar-recorrentes/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dados),
+    }),
+
+  deleteContaPagarRecorrente: (id: number) =>
+    fetchJson<void>(`${API}/contas-pagar-recorrentes/${id}`, { method: 'DELETE' }),
+
+  gerarContaPagarRecorrente: (id: number) =>
+    fetchJson<ContaPagar>(`${API}/contas-pagar-recorrentes/${id}/gerar-conta`, {
+      method: 'POST',
+    }),
+
+  gerarContasPagarMes: () =>
+    fetchJson<GerarContasPagarResultado>(`${API}/contas-pagar-recorrentes/gerar-contas-mes`, {
+      method: 'POST',
+    }),
 }

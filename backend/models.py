@@ -128,3 +128,114 @@ class Configuracao(Base):
 
     chave: Mapped[str] = mapped_column(String(80), primary_key=True)
     valor: Mapped[str] = mapped_column(String(500))
+
+
+class ContaRecorrente(Base):
+    __tablename__ = "contas_recorrentes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    cliente: Mapped[str] = mapped_column(String(200))
+    descricao: Mapped[str] = mapped_column(String(200))
+    valor: Mapped[float] = mapped_column(Float)
+    dia_vencimento: Mapped[int] = mapped_column(Integer)
+    frequencia: Mapped[str] = mapped_column(String(20), default="Mensal", index=True)
+    ativo: Mapped[bool] = mapped_column(default=True, index=True)
+    observacao: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+    contas: Mapped[list["ContaReceber"]] = relationship(
+        back_populates="recorrente",
+        order_by="ContaReceber.id.desc()",
+    )
+
+
+class ContaReceber(Base):
+    __tablename__ = "contas_receber"
+    __table_args__ = (
+        UniqueConstraint(
+            "recorrente_id",
+            "referencia_mes",
+            name="uq_conta_receber_recorrente_mes",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    cliente: Mapped[str] = mapped_column(String(200), index=True)
+    descricao: Mapped[str] = mapped_column(String(200))
+    valor: Mapped[float] = mapped_column(Float)
+    data_vencimento: Mapped[date] = mapped_column(Date, index=True)
+    status: Mapped[str] = mapped_column(String(20), default="pendente", index=True)
+    forma_pagamento: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    data_recebimento: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    recorrente_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("contas_recorrentes.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    referencia_mes: Mapped[str | None] = mapped_column(String(7), nullable=True, index=True)
+    observacao: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, index=True)
+
+    recorrente: Mapped["ContaRecorrente | None"] = relationship(back_populates="contas")
+
+
+class ContaPagarRecorrente(Base):
+    __tablename__ = "contas_pagar_recorrentes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    fornecedor: Mapped[str] = mapped_column(String(200))
+    descricao: Mapped[str] = mapped_column(String(200))
+    categoria: Mapped[str] = mapped_column(String(50), default="Fornecedor", index=True)
+    valor: Mapped[float] = mapped_column(Float)
+    dia_vencimento: Mapped[int] = mapped_column(Integer)
+    frequencia: Mapped[str] = mapped_column(String(20), default="Mensal", index=True)
+    ativo: Mapped[bool] = mapped_column(default=True, index=True)
+    is_dda: Mapped[bool] = mapped_column(default=False, index=True)
+    observacao: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+    contas: Mapped[list["ContaPagar"]] = relationship(
+        back_populates="recorrente",
+        order_by="ContaPagar.id.desc()",
+    )
+
+
+class ContaPagar(Base):
+    __tablename__ = "contas_pagar"
+    __table_args__ = (
+        UniqueConstraint(
+            "recorrente_id",
+            "referencia_mes",
+            name="uq_conta_pagar_recorrente_mes",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    fornecedor: Mapped[str] = mapped_column(String(200), index=True)
+    descricao: Mapped[str] = mapped_column(String(200))
+    categoria: Mapped[str] = mapped_column(String(50), index=True)
+    valor: Mapped[float] = mapped_column(Float)
+    data_vencimento: Mapped[date] = mapped_column(Date, index=True)
+    status: Mapped[str] = mapped_column(String(20), default="pendente", index=True)
+    is_dda: Mapped[bool] = mapped_column(default=False, index=True)
+    linha_digitavel: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    forma_pagamento: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    data_pagamento: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    recorrente_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("contas_pagar_recorrentes.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    referencia_mes: Mapped[str | None] = mapped_column(String(7), nullable=True, index=True)
+    saida_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("saidas.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    observacao: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, index=True)
+
+    recorrente: Mapped["ContaPagarRecorrente | None"] = relationship(back_populates="contas")

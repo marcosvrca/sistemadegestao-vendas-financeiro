@@ -18,6 +18,10 @@ import {
   Truck,
   Tags,
   BarChart3,
+  Repeat,
+  Plus,
+  Landmark,
+  History,
 } from 'lucide-react'
 
 export type Pagina =
@@ -33,18 +37,32 @@ export type Pagina =
   | 'estoque-configuracoes'
   | 'caixa'
   | 'contas-a-pagar'
+  | 'contas-pagar-recorrentes'
+  | 'dda-em-aberto'
+  | 'nova-conta-pagar'
+  | 'historico-pagamentos'
   | 'contas-a-receber'
+  | 'contas-recorrentes'
+  | 'nova-conta-receber'
   | 'fluxo-caixa'
   | 'cadastro-clientes'
   | 'cadastro-fornecedores'
   | 'cadastro-categorias'
   | 'relatorios'
 
-export interface NavItem {
+export interface NavSubItem {
   id: Pagina
   label: string
   icon: LucideIcon
+}
+
+export interface NavItem {
+  id?: Pagina
+  groupId?: string
+  label: string
+  icon: LucideIcon
   emBreve?: boolean
+  children?: NavSubItem[]
 }
 
 export interface NavSection {
@@ -93,8 +111,28 @@ export const NAV_SECOES: NavSection[] = [
     label: 'Financeiro',
     items: [
       { id: 'caixa', label: 'Caixa', icon: Wallet },
-      { id: 'contas-a-pagar', label: 'Contas a Pagar', icon: ArrowDownCircle },
-      { id: 'contas-a-receber', label: 'Contas a Receber', icon: ArrowUpCircle, emBreve: true },
+      {
+        groupId: 'contas-a-pagar',
+        label: 'Contas a Pagar',
+        icon: ArrowDownCircle,
+        children: [
+          { id: 'contas-a-pagar', label: 'Visão Geral', icon: Boxes },
+          { id: 'contas-pagar-recorrentes', label: 'Contas Recorrentes', icon: Repeat },
+          { id: 'dda-em-aberto', label: 'DDA em Aberto', icon: Landmark },
+          { id: 'nova-conta-pagar', label: 'Nova Conta a Pagar', icon: Plus },
+          { id: 'historico-pagamentos', label: 'Histórico de Pagamentos', icon: History },
+        ],
+      },
+      {
+        groupId: 'contas-a-receber',
+        label: 'Contas a Receber',
+        icon: ArrowUpCircle,
+        children: [
+          { id: 'contas-a-receber', label: 'Visão Geral', icon: Boxes },
+          { id: 'contas-recorrentes', label: 'Contas Recorrentes', icon: Repeat },
+          { id: 'nova-conta-receber', label: 'Nova Conta a Receber', icon: Plus },
+        ],
+      },
       { id: 'fluxo-caixa', label: 'Fluxo de Caixa', icon: TrendingUp, emBreve: true },
     ],
   },
@@ -128,8 +166,14 @@ export const PAGINA_TITULOS: Record<Pagina, string> = {
   'estoque-importar-xml': 'Importar XML da NF-e',
   'estoque-configuracoes': 'Configurações de Estoque',
   caixa: 'Caixa',
-  'contas-a-pagar': 'Contas a Pagar',
-  'contas-a-receber': 'Contas a Receber',
+  'contas-a-pagar': 'Contas a Pagar — Visão Geral',
+  'contas-pagar-recorrentes': 'Contas a Pagar Recorrentes',
+  'dda-em-aberto': 'DDA em Aberto',
+  'nova-conta-pagar': 'Nova Conta a Pagar',
+  'historico-pagamentos': 'Histórico de Pagamentos',
+  'contas-a-receber': 'Contas a Receber — Visão Geral',
+  'contas-recorrentes': 'Contas Recorrentes',
+  'nova-conta-receber': 'Nova Conta a Receber',
   'fluxo-caixa': 'Fluxo de Caixa',
   'cadastro-clientes': 'Clientes',
   'cadastro-fornecedores': 'Fornecedores',
@@ -149,8 +193,14 @@ export const PAGINA_SUBTITULOS: Partial<Record<Pagina, string>> = {
   'estoque-importar-xml': 'Entrada automática via nota fiscal',
   'estoque-configuracoes': 'Regras de operação e bloqueios do estoque',
   caixa: 'Abertura, fechamento e conferência do dia',
-  'contas-a-pagar': 'Despesas e obrigações a pagar',
-  'contas-a-receber': 'Recebimentos e cobranças',
+  'contas-a-pagar': 'Todas as obrigações pendentes: avulsas, recorrentes e DDA',
+  'contas-pagar-recorrentes': 'Aluguel, fornecedores fixos e despesas periódicas',
+  'dda-em-aberto': 'Débitos automáticos agendados aguardando compensação',
+  'nova-conta-pagar': 'Registre uma conta avulsa a pagar',
+  'historico-pagamentos': 'Contas já quitadas e saídas registradas',
+  'contas-a-receber': 'Todas as cobranças pendentes: vendas AV, avulsas e recorrentes',
+  'contas-recorrentes': 'Clientes mensais e cobranças periódicas',
+  'nova-conta-receber': 'Registre uma cobrança avulsa (não recorrente)',
   'fluxo-caixa': 'Entradas e saídas consolidadas',
   'cadastro-clientes': 'Cadastro de clientes',
   'cadastro-fornecedores': 'Cadastro de fornecedores',
@@ -166,21 +216,6 @@ export interface EmBreveConfig {
 }
 
 export const EM_BREVE_CONFIG: Partial<Record<Pagina, EmBreveConfig>> = {
-  'contas-a-receber': {
-    titulo: 'Contas a Receber',
-    descricao:
-      'Módulo para controlar vendas a prazo, vendas AV pendentes, recebimentos e inadimplência.',
-    recursosPrevistos: [
-      'Lista de títulos a receber por cliente',
-      'Baixa de recebimentos (Pix, dinheiro, cartão)',
-      'Integração com vendas AV',
-      'Alertas de vencimento',
-    ],
-    paginasRelacionadas: [
-      { pagina: 'vendas', label: 'Ver vendas' },
-      { pagina: 'dashboard', label: 'Dashboard' },
-    ],
-  },
   'fluxo-caixa': {
     titulo: 'Fluxo de Caixa',
     descricao: 'Visão consolidada de entradas e saídas por período, com projeção e saldo acumulado.',
@@ -260,7 +295,23 @@ export function isPaginaEmBreve(pagina: Pagina): boolean {
   return Boolean(EM_BREVE_CONFIG[pagina])
 }
 
+export function itemContemPagina(item: NavItem, pagina: Pagina): boolean {
+  if (item.id === pagina) return true
+  return item.children?.some((sub) => sub.id === pagina) ?? false
+}
+
 export function secaoIdDaPagina(pagina: Pagina): string {
-  const secao = NAV_SECOES.find((s) => s.items.some((i) => i.id === pagina))
+  const secao = NAV_SECOES.find((s) => s.items.some((i) => itemContemPagina(i, pagina)))
   return secao?.id ?? NAV_SECOES[0].id
+}
+
+export function grupoIdDaPagina(pagina: Pagina): string | null {
+  for (const secao of NAV_SECOES) {
+    for (const item of secao.items) {
+      if (item.groupId && item.children?.some((sub) => sub.id === pagina)) {
+        return item.groupId
+      }
+    }
+  }
+  return null
 }
