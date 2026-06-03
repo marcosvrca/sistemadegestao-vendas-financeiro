@@ -446,6 +446,8 @@ class ProdutoResponse(ProdutoBase):
     criado_em: datetime
     atualizado_em: datetime
     status_estoque: str = "ok"
+    # Saldo real no banco; pode ficar negativo quando vendas excedem o estoque.
+    estoque_atual: int
 
     model_config = {"from_attributes": True}
 

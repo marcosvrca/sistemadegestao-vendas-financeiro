@@ -104,11 +104,15 @@ export function EstoquePage({ secao, onRefresh }: EstoquePageProps) {
 
   async function carregar() {
     setLoading(true)
+    setError('')
     try {
       const tarefas: Promise<unknown>[] = [carregarResumo()]
       if (secao === 'produtos') tarefas.push(carregarProdutos())
       if (secao === 'movimentacoes') tarefas.push(carregarMovimentacoes())
       await Promise.all(tarefas)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao carregar estoque')
+      if (secao === 'produtos') setProdutos([])
     } finally {
       setLoading(false)
     }

@@ -9,6 +9,10 @@ import { NovaContaPagarPage } from './NovaContaPagarPage'
 import { HistoricoPagamentosPage } from './HistoricoPagamentosPage'
 import { ConfrontarDadosPage } from './ConfrontarDadosPage'
 import { CaixaPage } from './CaixaPage'
+import { CaixaVisaoGeralPage } from './CaixaVisaoGeralPage'
+import { CaixaControleDiarioPage } from './CaixaControleDiarioPage'
+import { FluxoCaixaPage } from './FluxoCaixaPage'
+import { CaixaRelatoriosPage } from './CaixaRelatoriosPage'
 import { ContasReceberPage } from './ContasReceberPage'
 import { ContasRecorrentesPage } from './ContasRecorrentesPage'
 import { NovaContaReceberPage } from './NovaContaReceberPage'
@@ -48,8 +52,22 @@ export function PageRouter({ pagina, refreshKey, onRefresh, onNavigate }: PageRo
       return <EstoqueResumoPage onNavigate={onNavigate} />
     case 'estoque-configuracoes':
       return <EstoqueConfigPage />
-    case 'caixa':
+    case 'caixa-visao-geral':
+      return <CaixaVisaoGeralPage onNavigate={onNavigate} />
+    case 'fluxo-caixa':
+      return <FluxoCaixaPage key={refreshKey} />
+    case 'caixa-controle-diario':
+      return <CaixaControleDiarioPage />
+    case 'caixa-abertura-fechamento':
       return <CaixaPage onRefresh={onRefresh} />
+    case 'caixa-relatorios':
+      return (
+        <CaixaRelatoriosPage
+          key={refreshKey}
+          onRefresh={onRefresh}
+          onNavigate={onNavigate}
+        />
+      )
     case 'contas-a-pagar':
       return <ContasPagarPage key={refreshKey} onRefresh={onRefresh} />
     case 'contas-pagar-recorrentes':

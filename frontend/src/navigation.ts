@@ -22,6 +22,8 @@ import {
   Plus,
   Landmark,
   History,
+  CalendarDays,
+  Lock,
 } from 'lucide-react'
 
 export type Pagina =
@@ -35,7 +37,11 @@ export type Pagina =
   | 'estoque-movimentacoes'
   | 'estoque-importar-xml'
   | 'estoque-configuracoes'
-  | 'caixa'
+  | 'caixa-visao-geral'
+  | 'fluxo-caixa'
+  | 'caixa-controle-diario'
+  | 'caixa-abertura-fechamento'
+  | 'caixa-relatorios'
   | 'contas-a-pagar'
   | 'contas-pagar-recorrentes'
   | 'dda-em-aberto'
@@ -44,7 +50,6 @@ export type Pagina =
   | 'contas-a-receber'
   | 'contas-recorrentes'
   | 'nova-conta-receber'
-  | 'fluxo-caixa'
   | 'cadastro-clientes'
   | 'cadastro-fornecedores'
   | 'cadastro-categorias'
@@ -110,7 +115,18 @@ export const NAV_SECOES: NavSection[] = [
     id: 'financeiro',
     label: 'Financeiro',
     items: [
-      { id: 'caixa', label: 'Caixa', icon: Wallet },
+      {
+        groupId: 'grupo-caixa',
+        label: 'Caixa',
+        icon: Wallet,
+        children: [
+          { id: 'caixa-visao-geral', label: 'Visão Geral', icon: Boxes },
+          { id: 'fluxo-caixa', label: 'Fluxo de Caixa', icon: TrendingUp },
+          { id: 'caixa-controle-diario', label: 'Controle Diário', icon: CalendarDays },
+          { id: 'caixa-abertura-fechamento', label: 'Abertura e Fechamento', icon: Lock },
+          { id: 'caixa-relatorios', label: 'Relatórios', icon: BarChart3 },
+        ],
+      },
       {
         groupId: 'contas-a-pagar',
         label: 'Contas a Pagar',
@@ -133,7 +149,6 @@ export const NAV_SECOES: NavSection[] = [
           { id: 'nova-conta-receber', label: 'Nova Conta a Receber', icon: Plus },
         ],
       },
-      { id: 'fluxo-caixa', label: 'Fluxo de Caixa', icon: TrendingUp, emBreve: true },
     ],
   },
   {
@@ -165,7 +180,11 @@ export const PAGINA_TITULOS: Record<Pagina, string> = {
   'estoque-movimentacoes': 'Movimentações de Estoque',
   'estoque-importar-xml': 'Importar XML da NF-e',
   'estoque-configuracoes': 'Configurações de Estoque',
-  caixa: 'Caixa',
+  'caixa-visao-geral': 'Caixa — Visão Geral',
+  'fluxo-caixa': 'Fluxo de Caixa',
+  'caixa-controle-diario': 'Controle Diário do Caixa',
+  'caixa-abertura-fechamento': 'Abertura e Fechamento de Caixa',
+  'caixa-relatorios': 'Relatórios de Caixa',
   'contas-a-pagar': 'Contas a Pagar — Visão Geral',
   'contas-pagar-recorrentes': 'Contas a Pagar Recorrentes',
   'dda-em-aberto': 'DDA em Aberto',
@@ -174,7 +193,6 @@ export const PAGINA_TITULOS: Record<Pagina, string> = {
   'contas-a-receber': 'Contas a Receber — Visão Geral',
   'contas-recorrentes': 'Contas Recorrentes',
   'nova-conta-receber': 'Nova Conta a Receber',
-  'fluxo-caixa': 'Fluxo de Caixa',
   'cadastro-clientes': 'Clientes',
   'cadastro-fornecedores': 'Fornecedores',
   'cadastro-categorias': 'Categorias',
@@ -192,7 +210,11 @@ export const PAGINA_SUBTITULOS: Partial<Record<Pagina, string>> = {
   'estoque-movimentacoes': 'Entradas, saídas e histórico',
   'estoque-importar-xml': 'Entrada automática via nota fiscal',
   'estoque-configuracoes': 'Regras de operação e bloqueios do estoque',
-  caixa: 'Abertura, fechamento e conferência do dia',
+  'caixa-visao-geral': 'Resumo dos caixas abertos, fechados e indicadores do período',
+  'fluxo-caixa': 'Entradas e saídas por período com saldo acumulado',
+  'caixa-controle-diario': 'Movimentação e conferência do dia selecionado',
+  'caixa-abertura-fechamento': 'Registrar abertura, fechamento e diferença do caixa físico',
+  'caixa-relatorios': 'Histórico de aberturas, fechamentos e diferenças',
   'contas-a-pagar': 'Todas as obrigações pendentes: avulsas, recorrentes e DDA',
   'contas-pagar-recorrentes': 'Aluguel, fornecedores fixos e despesas periódicas',
   'dda-em-aberto': 'Débitos automáticos agendados aguardando compensação',
@@ -201,7 +223,6 @@ export const PAGINA_SUBTITULOS: Partial<Record<Pagina, string>> = {
   'contas-a-receber': 'Todas as cobranças pendentes: vendas AV, avulsas e recorrentes',
   'contas-recorrentes': 'Clientes mensais e cobranças periódicas',
   'nova-conta-receber': 'Registre uma cobrança avulsa (não recorrente)',
-  'fluxo-caixa': 'Entradas e saídas consolidadas',
   'cadastro-clientes': 'Cadastro de clientes',
   'cadastro-fornecedores': 'Cadastro de fornecedores',
   'cadastro-categorias': 'Categorias de produtos e despesas',
@@ -216,20 +237,6 @@ export interface EmBreveConfig {
 }
 
 export const EM_BREVE_CONFIG: Partial<Record<Pagina, EmBreveConfig>> = {
-  'fluxo-caixa': {
-    titulo: 'Fluxo de Caixa',
-    descricao: 'Visão consolidada de entradas e saídas por período, com projeção e saldo acumulado.',
-    recursosPrevistos: [
-      'Gráfico de entradas × saídas',
-      'Saldo projetado',
-      'Filtro por forma de pagamento',
-      'Exportação para Excel',
-    ],
-    paginasRelacionadas: [
-      { pagina: 'caixa', label: 'Caixa diário' },
-      { pagina: 'contas-a-pagar', label: 'Contas a pagar' },
-    ],
-  },
   'cadastro-clientes': {
     titulo: 'Clientes',
     descricao: 'Cadastro centralizado de clientes para vendas, histórico e contas a receber.',

@@ -6,13 +6,12 @@ import {
   DollarSign,
   ArrowDownCircle,
   Banknote,
-  Trash2,
   AlertCircle,
 } from 'lucide-react'
 import { api } from '../api'
-import { formatarMoeda, formatarDataIso, toDateInput } from '../utils'
+import { formatarMoeda, toDateInput } from '../utils'
 import { KPICard } from './KPICard'
-import type { CaixaDiario, CaixaDiarioListItem } from '../types'
+import type { CaixaDiario } from '../types'
 
 interface CaixaPageProps {
   onRefresh?: () => void
@@ -21,16 +20,13 @@ interface CaixaPageProps {
 export function CaixaPage({ onRefresh }: CaixaPageProps) {
   const [dataSelecionada, setDataSelecionada] = useState(toDateInput())
   const [caixa, setCaixa] = useState<CaixaDiario | null>(null)
-  const [historico, setHistorico] = useState<CaixaDiarioListItem[]>([])
   const [valorInicial, setValorInicial] = useState('')
   const [obsAbertura, setObsAbertura] = useState('')
   const [valorFechamento, setValorFechamento] = useState('')
   const [obsFechamento, setObsFechamento] = useState('')
   const [loadingDia, setLoadingDia] = useState(true)
-  const [loadingHistorico, setLoadingHistorico] = useState(true)
   const [salvando, setSalvando] = useState(false)
   const [error, setError] = useState('')
-  const [erroHistorico, setErroHistorico] = useState('')
   const [sucesso, setSucesso] = useState('')
 
   async function carregarDia(data: string) {
@@ -54,25 +50,6 @@ export function CaixaPage({ onRefresh }: CaixaPageProps) {
       setLoadingDia(false)
     }
   }
-
-  async function carregarHistorico() {
-    setLoadingHistorico(true)
-    setErroHistorico('')
-    try {
-      setHistorico(await api.getCaixaLista())
-    } catch (err) {
-      setHistorico([])
-      setErroHistorico(
-        err instanceof Error ? err.message : 'Não foi possível carregar o histórico de caixa',
-      )
-    } finally {
-      setLoadingHistorico(false)
-    }
-  }
-
-  useEffect(() => {
-    carregarHistorico()
-  }, [])
 
   useEffect(() => {
     carregarDia(dataSelecionada)
@@ -98,7 +75,6 @@ export function CaixaPage({ onRefresh }: CaixaPageProps) {
       })
       setCaixa(resultado)
       setSucesso('Abertura do caixa registrada.')
-      await carregarHistorico()
       onRefresh?.()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao registrar abertura')
@@ -127,20 +103,12 @@ export function CaixaPage({ onRefresh }: CaixaPageProps) {
       })
       setCaixa(resultado)
       setSucesso('Caixa fechado com sucesso.')
-      await carregarHistorico()
       onRefresh?.()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao fechar caixa')
     } finally {
       setSalvando(false)
     }
-  }
-
-  async function handleExcluir(id: number) {
-    if (!confirm('Excluir o registro de caixa deste dia?')) return
-    await api.deleteCaixa(id)
-    await Promise.all([carregarDia(dataSelecionada), carregarHistorico()])
-    onRefresh?.()
   }
 
   const resumo = caixa?.resumo_sistema
@@ -150,9 +118,9 @@ export function CaixaPage({ onRefresh }: CaixaPageProps) {
   return (
     <div>
       <div className="page-header">
-        <h1 className="page-title">Caixa</h1>
+        <h1 className="page-title">Abertura e Fechamento de Caixa</h1>
         <p className="page-subtitle">
-          Controle diário do caixa físico — não altera faturamento nem outras áreas do sistema
+          Registre o valor inicial, feche o dia e confira a diferença do caixa físico
         </p>
       </div>
 
@@ -383,89 +351,6 @@ export function CaixaPage({ onRefresh }: CaixaPageProps) {
           )}
         </>
       )}
-
-      <div className="table-card" style={{ marginTop: '1.5rem' }}>
-        <h3 className="chart-title" style={{ padding: '1rem 1rem 0' }}>Histórico de caixa</h3>
-        <p style={{ padding: '0 1rem', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-          Dias em que a abertura do caixa foi registrada (não lista apenas vendas do dia).
-        </p>
-        {erroHistorico && (
-          <div className="error-message" style={{ margin: '1rem' }}>{erroHistorico}</div>
-        )}
-        {loadingHistorico ? (
-          <div className="loading" style={{ padding: '2rem' }}>Carregando histórico...</div>
-        ) : historico.length === 0 ? (
-          <div className="empty-state" style={{ padding: '2rem' }}>
-            <Wallet size={40} style={{ marginBottom: 12, opacity: 0.4 }} />
-            <p>Nenhum dia com abertura de caixa registrada</p>
-            <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: 8 }}>
-              Use o formulário acima em &quot;Abertura do caixa&quot; e clique em Registrar abertura.
-            </p>
-          </div>
-        ) : (
-          <div className="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>Data</th>
-                  <th>Inicial</th>
-                  <th>Faturamento</th>
-                  <th>Esperado</th>
-                  <th>Contado</th>
-                  <th>Diferença</th>
-                  <th>Status</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {historico.map((item) => (
-                  <tr
-                    key={item.id}
-                    style={item.data.slice(0, 10) === dataSelecionada ? { background: 'var(--bg-card-hover)' } : undefined}
-                  >
-                    <td>
-                      <button
-                        type="button"
-                        onClick={() => setDataSelecionada(item.data.slice(0, 10))}
-                        style={{ color: 'var(--accent-light)', padding: 0, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
-                      >
-                        {formatarDataIso(item.data.slice(0, 10))}
-                      </button>
-                    </td>
-                    <td>{formatarMoeda(item.valor_inicial)}</td>
-                    <td>{formatarMoeda(item.faturamento)}</td>
-                    <td>{item.saldo_esperado != null ? formatarMoeda(item.saldo_esperado) : '—'}</td>
-                    <td>{item.valor_fechamento != null ? formatarMoeda(item.valor_fechamento) : '—'}</td>
-                    <td>
-                      {item.diferenca != null ? (
-                        <span className={item.diferenca === 0 ? '' : 'text-saida'} style={item.diferenca === 0 ? { color: 'var(--success)' } : undefined}>
-                          {formatarMoeda(item.diferenca)}
-                        </span>
-                      ) : (
-                        '—'
-                      )}
-                    </td>
-                    <td>
-                      <span className="badge">
-                        {item.fechado_em ? 'Fechado' : 'Aberto'}
-                      </span>
-                    </td>
-                    <td className="actions">
-                      <button
-                        className="btn btn-danger btn-sm"
-                        onClick={() => handleExcluir(item.id)}
-                        title="Excluir"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
     </div>
   )
 }
