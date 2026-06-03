@@ -213,10 +213,17 @@ export function VendaEditModal({ venda, onClose, onSuccess }: VendaEditModalProp
                   </option>
                 ))}
               </select>
-              {formaPagamento === 'AV' && (
+              {formaPagamento === 'AV' ? (
                 <p className="av-form-aviso">
-                  Pagamento pendente — altere para outra forma quando o cliente quitar.
+                  Pagamento pendente — não entra no faturamento até quitar. Altere a forma de
+                  pagamento quando o cliente pagar.
                 </p>
+              ) : (
+                venda.forma_pagamento === 'AV' && (
+                  <p className="av-form-aviso" style={{ color: 'var(--success, #22c55e)' }}>
+                    Ao salvar, a venda entra no faturamento com a data de pagamento de hoje.
+                  </p>
+                )
               )}
             </div>
 

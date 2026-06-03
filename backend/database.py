@@ -33,6 +33,7 @@ def migrar_banco() -> None:
         Produto,
         Saida,
         Venda,
+        Configuracao,
     )
 
     Base.metadata.create_all(bind=engine)
@@ -52,6 +53,14 @@ def migrar_banco() -> None:
                     "WHERE forma_pagamento = 'Cartão Crédito' AND parcelas IS NULL"
                 )
             )
+            if "pago_em" not in colunas:
+                conn.execute(text("ALTER TABLE vendas ADD COLUMN pago_em DATETIME"))
+                conn.execute(
+                    text(
+                        "UPDATE vendas SET pago_em = data "
+                        "WHERE forma_pagamento != 'AV' AND pago_em IS NULL"
+                    )
+                )
         conn.commit()
 
     db = SessionLocal()

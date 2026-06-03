@@ -149,6 +149,7 @@ class ImportacaoResultado(BaseModel):
 class VendaResponse(VendaBase):
     id: int
     data: datetime
+    pago_em: datetime | None = None
     valor: float
     produto: str
     quantidade: int
@@ -504,6 +505,15 @@ class EstoqueResumo(BaseModel):
     produtos_sem_estoque: int
     valor_total_estoque: float
     total_unidades: int
+    permitir_estoque_insuficiente: bool = False
+
+
+class EstoqueConfiguracao(BaseModel):
+    permitir_estoque_insuficiente: bool
+
+
+class EstoqueConfiguracaoUpdate(BaseModel):
+    permitir_estoque_insuficiente: bool
 
 
 class ImportacaoNFeItemResultado(BaseModel):

@@ -1401,6 +1401,41 @@ td.actions {
   border-top: 1px solid var(--border);
 }
 
+.vendas-resultado-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  margin-bottom: 1rem;
+  padding: 0.65rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.vendas-resultado-contagem strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.vendas-resultado-filtro {
+  color: var(--text-secondary);
+}
+
+.vendas-resultado-filtro::before {
+  content: '·';
+  margin-right: 0.5rem;
+  opacity: 0.5;
+}
+
+.vendas-resultado-total {
+  margin-left: auto;
+  font-weight: 600;
+  color: var(--accent-light);
+}
+
 .vendas-busca {
   position: relative;
   flex: 1;
@@ -1914,6 +1949,17 @@ td.actions {
   min-width: 0;
 }
 
+.venda-compact-tabela .form-select {
+  padding: 0.4rem 0.5rem;
+  font-size: 0.8125rem;
+  min-width: 0;
+  width: 100%;
+}
+
+.venda-produto-cell {
+  min-width: 11rem;
+}
+
 .venda-compact-tabela th:nth-child(2),
 .venda-compact-tabela th:nth-child(3),
 .venda-compact-tabela th:nth-child(4),
@@ -2262,6 +2308,68 @@ td.actions {
   background: var(--bg-elevated);
   color: var(--accent-light);
   margin-bottom: 0.25rem;
+}
+
+.estoque-config-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-width: 720px;
+}
+
+.estoque-config-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.estoque-config-section-desc {
+  margin: 0 0 1.25rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.estoque-config-section-muted {
+  opacity: 0.85;
+}
+
+.estoque-config-rule {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+}
+
+@media (min-width: 640px) {
+  .estoque-config-rule {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.25rem;
+  }
+}
+
+.estoque-config-rule-text strong {
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+.estoque-config-rule-text p {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.estoque-config-toggle {
+  margin: 0;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 /* Modal */

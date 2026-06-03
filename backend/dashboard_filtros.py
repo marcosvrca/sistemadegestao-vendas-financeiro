@@ -5,6 +5,7 @@ from typing import Literal
 from fastapi import Query
 from sqlalchemy.orm import Query as SqlQuery
 
+from av_utils import aplicar_filtro_vendas_financeiras, data_efetiva_venda
 from models import ItemVenda, Saida, Venda
 
 FiltroPeriodo = Literal["hoje", "mes", "periodo", "data", "total"]
@@ -103,13 +104,13 @@ def montar_filtros_dashboard(
 
 
 def filtrar_vendas(query: SqlQuery, filtros: FiltrosDashboard) -> SqlQuery:
+    query = aplicar_filtro_vendas_financeiras(query, filtros.forma_pagamento)
     if filtros.periodo.dt_inicio and filtros.periodo.dt_fim:
+        ref = data_efetiva_venda()
         query = query.filter(
-            Venda.data >= filtros.periodo.dt_inicio,
-            Venda.data <= filtros.periodo.dt_fim,
+            ref >= filtros.periodo.dt_inicio,
+            ref <= filtros.periodo.dt_fim,
         )
-    if filtros.forma_pagamento:
-        query = query.filter(Venda.forma_pagamento == filtros.forma_pagamento)
     if filtros.produto:
         termo = f"%{filtros.produto}%"
         query = query.filter(

@@ -9,6 +9,7 @@ import {
   Boxes,
   ArrowDownUp,
   FileCode2,
+  Settings,
   Wallet,
   ArrowDownCircle,
   ArrowUpCircle,
@@ -29,6 +30,7 @@ export type Pagina =
   | 'estoque-resumo'
   | 'estoque-movimentacoes'
   | 'estoque-importar-xml'
+  | 'estoque-configuracoes'
   | 'caixa'
   | 'contas-a-pagar'
   | 'contas-a-receber'
@@ -83,6 +85,7 @@ export const NAV_SECOES: NavSection[] = [
       { id: 'estoque-resumo', label: 'Visão Geral', icon: Boxes },
       { id: 'estoque-movimentacoes', label: 'Movimentações', icon: ArrowDownUp },
       { id: 'estoque-importar-xml', label: 'Importar XML (NF-e)', icon: FileCode2 },
+      { id: 'estoque-configuracoes', label: 'Configurações', icon: Settings },
     ],
   },
   {
@@ -123,6 +126,7 @@ export const PAGINA_TITULOS: Record<Pagina, string> = {
   'estoque-resumo': 'Visão do Estoque',
   'estoque-movimentacoes': 'Movimentações de Estoque',
   'estoque-importar-xml': 'Importar XML da NF-e',
+  'estoque-configuracoes': 'Configurações de Estoque',
   caixa: 'Caixa',
   'contas-a-pagar': 'Contas a Pagar',
   'contas-a-receber': 'Contas a Receber',
@@ -143,6 +147,7 @@ export const PAGINA_SUBTITULOS: Partial<Record<Pagina, string>> = {
   'estoque-resumo': 'Indicadores e alertas de estoque',
   'estoque-movimentacoes': 'Entradas, saídas e histórico',
   'estoque-importar-xml': 'Entrada automática via nota fiscal',
+  'estoque-configuracoes': 'Regras de operação e bloqueios do estoque',
   caixa: 'Abertura, fechamento e conferência do dia',
   'contas-a-pagar': 'Despesas e obrigações a pagar',
   'contas-a-receber': 'Recebimentos e cobranças',

@@ -5,6 +5,10 @@ from sqlalchemy import desc, or_
 from sqlalchemy.orm import Session
 
 from database import get_db
+from estoque_config import (
+    definir_permitir_estoque_insuficiente,
+    obter_permitir_estoque_insuficiente,
+)
 from estoque_utils import normalizar_nome_produto, registrar_movimentacao
 from models import MovimentacaoEstoque, Produto
 from nfe_xml_import import (
@@ -14,6 +18,8 @@ from nfe_xml_import import (
 )
 from schemas import (
     CATEGORIAS_PRODUTO,
+    EstoqueConfiguracao,
+    EstoqueConfiguracaoUpdate,
     EstoqueResumo,
     ImportacaoNFeItemResultado,
     ImportacaoNFeResultado,
@@ -75,7 +81,24 @@ def resumo_estoque(db: Session = Depends(get_db)):
         produtos_sem_estoque=len(zerado),
         valor_total_estoque=round(valor_total, 2),
         total_unidades=unidades,
+        permitir_estoque_insuficiente=obter_permitir_estoque_insuficiente(db),
     )
+
+
+@router.get("/configuracoes", response_model=EstoqueConfiguracao)
+def obter_configuracoes_estoque(db: Session = Depends(get_db)):
+    return EstoqueConfiguracao(
+        permitir_estoque_insuficiente=obter_permitir_estoque_insuficiente(db),
+    )
+
+
+@router.put("/configuracoes", response_model=EstoqueConfiguracao)
+def atualizar_configuracoes_estoque(
+    dados: EstoqueConfiguracaoUpdate,
+    db: Session = Depends(get_db),
+):
+    valor = definir_permitir_estoque_insuficiente(db, dados.permitir_estoque_insuficiente)
+    return EstoqueConfiguracao(permitir_estoque_insuficiente=valor)
 
 
 @router.get("/opcoes", response_model=list[ProdutoOpcao])

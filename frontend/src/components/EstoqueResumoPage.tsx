@@ -6,6 +6,7 @@ import {
   ArrowDownUp,
   FileCode2,
   PlusCircle,
+  Settings,
 } from 'lucide-react'
 import { api } from '../api'
 import { formatarMoeda } from '../utils'
@@ -46,6 +47,12 @@ export function EstoqueResumoPage({ onNavigate }: EstoqueResumoPageProps) {
       label: 'Importar XML',
       desc: 'Entrada via NF-e',
       icon: FileCode2,
+    },
+    {
+      pagina: 'estoque-configuracoes',
+      label: 'Configurações',
+      desc: 'Regras e bloqueios',
+      icon: Settings,
     },
     {
       pagina: 'nova-venda',

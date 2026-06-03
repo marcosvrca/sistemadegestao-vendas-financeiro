@@ -2,6 +2,7 @@ from datetime import date, datetime, timedelta
 
 from sqlalchemy.orm import Session
 
+from av_utils import aplicar_filtro_vendas_financeiras, data_efetiva_venda
 from models import Saida, Venda
 
 FORMA_DINHEIRO = "Dinheiro"
@@ -16,9 +17,10 @@ def intervalo_do_dia(dia: date) -> tuple[datetime, datetime]:
 def calcular_resumo_sistema(db: Session, dia: date) -> dict:
     dt_inicio, dt_fim = intervalo_do_dia(dia)
 
+    ref = data_efetiva_venda()
     vendas = (
-        db.query(Venda)
-        .filter(Venda.data >= dt_inicio, Venda.data <= dt_fim)
+        aplicar_filtro_vendas_financeiras(db.query(Venda), None)
+        .filter(ref >= dt_inicio, ref <= dt_fim)
         .all()
     )
     saidas = (

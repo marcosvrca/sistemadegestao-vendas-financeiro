@@ -3,6 +3,7 @@ import type {
   ConfrontarPeriodosResponse,
   DashboardKPIs,
   EstoqueResumo,
+  EstoqueConfiguracao,
   ImportacaoResultado,
   ImportacaoNFeResultado,
   MovimentacaoEstoque,
@@ -170,6 +171,16 @@ export const api = {
     fetchJson<void>(`${API}/caixa/${id}`, { method: 'DELETE' }),
 
   getEstoqueResumo: () => fetchJson<EstoqueResumo>(`${API}/estoque/resumo`),
+
+  getEstoqueConfiguracoes: () =>
+    fetchJson<EstoqueConfiguracao>(`${API}/estoque/configuracoes`),
+
+  updateEstoqueConfiguracoes: (dados: EstoqueConfiguracao) =>
+    fetchJson<EstoqueConfiguracao>(`${API}/estoque/configuracoes`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dados),
+    }),
 
   getCategoriasProduto: () => fetchJson<string[]>(`${API}/estoque/categorias`),
 

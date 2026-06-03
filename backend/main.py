@@ -53,6 +53,7 @@ from dashboard_filtros import (
     montar_filtros_dashboard,
 )
 from dashboard_confrontar import confrontar_periodos, obter_melhor_dia
+from av_utils import registrar_quitacao_av
 from venda_utils import calcular_valor_item, normalizar_data_venda, sincronizar_cabecalho
 from estoque_api import router as estoque_router
 from estoque_utils import (
@@ -60,6 +61,7 @@ from estoque_utils import (
     estornar_itens_venda_estoque,
     sincronizar_estoque_venda,
 )
+from estoque_config import obter_permitir_estoque_insuficiente
 
 migrar_banco()
 
@@ -344,7 +346,12 @@ def criar_venda(venda: VendaCreate, db: Session = Depends(get_db)):
     db.flush()
     sincronizar_cabecalho(nova_venda, itens)
 
-    aplicar_itens_venda_estoque(db, itens, nova_venda.id)
+    aplicar_itens_venda_estoque(
+        db,
+        itens,
+        nova_venda.id,
+        permitir_negativo=obter_permitir_estoque_insuficiente(db),
+    )
 
     db.commit()
     db.refresh(nova_venda)
@@ -362,6 +369,7 @@ def atualizar_venda(venda_id: int, dados: VendaUpdate, db: Session = Depends(get
     if not venda:
         raise HTTPException(status_code=404, detail="Venda não encontrada")
 
+    forma_anterior = venda.forma_pagamento
     itens_antigos = list(venda.itens) if venda.itens else []
 
     campos = dados.model_dump(exclude_unset=True, exclude={"itens", "produto", "quantidade", "valor_unitario", "desconto"})
@@ -370,13 +378,22 @@ def atualizar_venda(venda_id: int, dados: VendaUpdate, db: Session = Depends(get
     for campo, valor in campos.items():
         setattr(venda, campo, valor)
 
+    if "forma_pagamento" in campos:
+        registrar_quitacao_av(venda, forma_anterior)
+
     if dados.itens is not None:
         db.query(ItemVenda).filter(ItemVenda.venda_id == venda_id).delete()
         itens = criar_itens_venda(venda_id, dados.itens)
         db.add_all(itens)
         db.flush()
         sincronizar_cabecalho(venda, itens)
-        sincronizar_estoque_venda(db, itens_antigos, itens, venda_id)
+        sincronizar_estoque_venda(
+            db,
+            itens_antigos,
+            itens,
+            venda_id,
+            permitir_negativo=obter_permitir_estoque_insuficiente(db),
+        )
     elif any(
         getattr(dados, campo) is not None
         for campo in ("produto", "quantidade", "valor_unitario", "desconto")

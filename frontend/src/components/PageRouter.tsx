@@ -7,6 +7,7 @@ import { ConfrontarDadosPage } from './ConfrontarDadosPage'
 import { CaixaPage } from './CaixaPage'
 import { EstoquePage } from './EstoquePage'
 import { EstoqueResumoPage } from './EstoqueResumoPage'
+import { EstoqueConfigPage } from './EstoqueConfigPage'
 import { EmBrevePage } from './EmBrevePage'
 import type { Pagina } from '../navigation'
 import { isPaginaEmBreve, paginaParaSecaoEstoque } from '../navigation'
@@ -38,6 +39,8 @@ export function PageRouter({ pagina, refreshKey, onRefresh, onNavigate }: PageRo
       return <ImportExcel onSuccess={onRefresh} />
     case 'estoque-resumo':
       return <EstoqueResumoPage onNavigate={onNavigate} />
+    case 'estoque-configuracoes':
+      return <EstoqueConfigPage />
     case 'caixa':
       return <CaixaPage onRefresh={onRefresh} />
     case 'contas-a-pagar':

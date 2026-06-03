@@ -42,6 +42,39 @@ function datasParaApi(inicio: string, fim: string): Record<string, string> {
   return params
 }
 
+function formatarDataFiltro(iso: string): string {
+  const [y, m, d] = iso.split('-')
+  if (!y || !m || !d) return iso
+  return `${d}/${m}/${y}`
+}
+
+function descricaoFiltrosAtivos(opts: {
+  busca: string
+  formaPagamento: string
+  somenteAV: boolean
+  periodoRapido: PeriodoRapido
+  dataInicio: string
+  dataFim: string
+}): string {
+  const partes: string[] = []
+  if (opts.periodoRapido === 'hoje') partes.push('Hoje')
+  else if (opts.periodoRapido === '7dias') partes.push('Últimos 7 dias')
+  else if (opts.periodoRapido === 'mes') partes.push('Este mês')
+  else if (opts.dataInicio || opts.dataFim) {
+    if (opts.dataInicio && opts.dataInicio === opts.dataFim) {
+      partes.push(formatarDataFiltro(opts.dataInicio))
+    } else {
+      const ini = opts.dataInicio ? formatarDataFiltro(opts.dataInicio) : '…'
+      const fim = opts.dataFim ? formatarDataFiltro(opts.dataFim) : '…'
+      partes.push(`${ini} a ${fim}`)
+    }
+  }
+  if (opts.busca.trim()) partes.push(`Busca: "${opts.busca.trim()}"`)
+  if (opts.somenteAV) partes.push('AV pendentes')
+  else if (opts.formaPagamento) partes.push(opts.formaPagamento)
+  return partes.join(' · ')
+}
+
 export function VendasList({ onRefresh }: VendasListProps) {
   const [vendas, setVendas] = useState<Venda[]>([])
   const [loading, setLoading] = useState(true)
@@ -115,6 +148,15 @@ export function VendasList({ onRefresh }: VendasListProps) {
 
   const temFiltros =
     busca || formaPagamento || somenteAV || dataInicio || dataFim
+
+  const descricaoFiltro = descricaoFiltrosAtivos({
+    busca,
+    formaPagamento,
+    somenteAV,
+    periodoRapido,
+    dataInicio,
+    dataFim,
+  })
 
   const totalListado = vendas.reduce((s, v) => s + v.valor, 0)
 
@@ -242,6 +284,21 @@ export function VendasList({ onRefresh }: VendasListProps) {
           )}
         </div>
       </div>
+
+      {!loading && temFiltros && (
+        <div className="vendas-resultado-bar" aria-live="polite">
+          <span className="vendas-resultado-contagem">
+            <strong>{vendas.length}</strong>{' '}
+            {vendas.length === 1 ? 'registro retornado' : 'registros retornados'}
+          </span>
+          {descricaoFiltro && (
+            <span className="vendas-resultado-filtro">{descricaoFiltro}</span>
+          )}
+          {vendas.length > 0 && (
+            <span className="vendas-resultado-total">Total {formatarMoeda(totalListado)}</span>
+          )}
+        </div>
+      )}
 
       {loading ? (
         <div className="loading">Carregando vendas...</div>

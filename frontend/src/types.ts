@@ -20,6 +20,7 @@ export interface Venda {
   troco?: number | null
   valor_recebido?: number | null
   parcelas?: number | null
+  pago_em?: string | null
   observacao?: string | null
   itens?: ItemVenda[]
 }
@@ -168,6 +169,11 @@ export interface EstoqueResumo {
   produtos_sem_estoque: number
   valor_total_estoque: number
   total_unidades: number
+  permitir_estoque_insuficiente: boolean
+}
+
+export interface EstoqueConfiguracao {
+  permitir_estoque_insuficiente: boolean
 }
 
 export interface ImportacaoNFeItemResultado {

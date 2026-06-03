@@ -176,6 +176,7 @@ export function Dashboard() {
           value={formatarMoeda(kpis.total_vendas)}
           icon={DollarSign}
           iconColor="gold"
+          subtitle="Somente vendas pagas (AV pendente não entra)"
         />
         <KPICard
           label="Média de Venda"

@@ -21,6 +21,7 @@ class Venda(Base):
     troco: Mapped[float | None] = mapped_column(Float, nullable=True)
     valor_recebido: Mapped[float | None] = mapped_column(Float, nullable=True)
     parcelas: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    pago_em: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
     observacao: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     itens: Mapped[list["ItemVenda"]] = relationship(
@@ -120,3 +121,10 @@ class MovimentacaoEstoque(Base):
     data: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, index=True)
 
     produto: Mapped["Produto"] = relationship(back_populates="movimentacoes")
+
+
+class Configuracao(Base):
+    __tablename__ = "configuracoes"
+
+    chave: Mapped[str] = mapped_column(String(80), primary_key=True)
+    valor: Mapped[str] = mapped_column(String(500))

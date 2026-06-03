@@ -9,7 +9,11 @@ import {
   toDatetimeLocal,
 } from '../utils'
 import type { ItemVenda, ProdutoOpcao, VendaCreate } from '../types'
-import { buscarProdutoOpcao } from '../produtoEstoqueHelpers'
+import {
+  PRODUTO_OUTRO_VALUE,
+  produtoCatalogoDoItem,
+  resolverNomeProduto,
+} from '../produtoEstoqueHelpers'
 
 interface VendaFormProps {
   onSuccess?: () => void
@@ -17,6 +21,8 @@ interface VendaFormProps {
 
 interface ItemForm extends ItemVenda {
   key: string
+  produtoSelecionado: string
+  produtoOutro: string
 }
 
 const CLIENTES_RAPIDOS = ['Cliente avulso', 'Congregação', 'Visitante']
@@ -31,6 +37,8 @@ function criarItemVazio(): ItemForm {
   return {
     key: crypto.randomUUID(),
     produto: '',
+    produtoSelecionado: '',
+    produtoOutro: '',
     quantidade: 1,
     valor_unitario: 0,
     desconto: 0,
@@ -97,20 +105,45 @@ export function VendaForm({ onSuccess }: VendaFormProps) {
     setSucesso(false)
   }
 
-  function aoConfirmarProduto(key: string, nome: string) {
-    const match = buscarProdutoOpcao(nome, opcoesProduto)
-    if (!match) return
+  function selecionarProdutoItem(key: string, valor: string) {
+    setItens((prev) =>
+      prev.map((item) => {
+        if (item.key !== key) return item
+
+        if (valor === PRODUTO_OUTRO_VALUE) {
+          return {
+            ...item,
+            produtoSelecionado: PRODUTO_OUTRO_VALUE,
+            produto: '',
+            produtoOutro: '',
+          }
+        }
+
+        const catalogo = opcoesProduto.find((p) => String(p.id) === valor)
+        if (!catalogo) {
+          return { ...item, produtoSelecionado: '', produto: '', produtoOutro: '' }
+        }
+
+        return {
+          ...item,
+          produtoSelecionado: valor,
+          produto: catalogo.nome,
+          produtoOutro: '',
+        }
+      }),
+    )
+    setSucesso(false)
+  }
+
+  function atualizarProdutoOutro(key: string, nome: string) {
     setItens((prev) =>
       prev.map((item) =>
         item.key === key
-          ? {
-              ...item,
-              valor_unitario:
-                item.valor_unitario <= 0 ? match.preco_venda : item.valor_unitario,
-            }
+          ? { ...item, produtoOutro: nome, produto: nome.trim() }
           : item,
       ),
     )
+    setSucesso(false)
   }
 
   function adicionarItem() {
@@ -136,11 +169,16 @@ export function VendaForm({ onSuccess }: VendaFormProps) {
     e.preventDefault()
     setError('')
 
-    const itensInvalidos = itens.some(
-      (item) => !item.produto.trim() || item.valor_unitario <= 0,
-    )
+    const itensInvalidos = itens.some((item) => {
+      const nome = resolverNomeProduto(item, opcoesProduto)
+      if (!item.produtoSelecionado) return true
+      if (item.produtoSelecionado === PRODUTO_OUTRO_VALUE && !item.produtoOutro.trim()) {
+        return true
+      }
+      return !nome || item.valor_unitario <= 0
+    })
     if (itensInvalidos) {
-      setError('Preencha produto e valor unitário em todos os itens.')
+      setError('Selecione o produto (ou informe o nome em Outro) e o valor unitário.')
       return
     }
 
@@ -168,8 +206,11 @@ export function VendaForm({ onSuccess }: VendaFormProps) {
       valor_recebido: houveTroco && isDinheiro ? valorRecebidoNum : undefined,
       troco: houveTroco && isDinheiro ? trocoCalculado : undefined,
       parcelas: isCredito ? parcelas : undefined,
-      itens: itens.map(({ produto, quantidade, valor_unitario, desconto }) => ({
-        produto: produto.trim(),
+      itens: itens.map(({ produtoSelecionado, produtoOutro, produto, quantidade, valor_unitario, desconto }) => ({
+        produto: resolverNomeProduto(
+          { produtoSelecionado, produtoOutro, produto },
+          opcoesProduto,
+        ),
         quantidade,
         valor_unitario,
         desconto,
@@ -306,12 +347,6 @@ export function VendaForm({ onSuccess }: VendaFormProps) {
             </button>
           </div>
 
-          <datalist id="produtos-estoque-list">
-            {opcoesProduto.map((p) => (
-              <option key={p.id} value={p.nome} />
-            ))}
-          </datalist>
-
           <div className="venda-compact-tabela-wrap">
             <table className="venda-compact-tabela">
               <thead>
@@ -331,28 +366,49 @@ export function VendaForm({ onSuccess }: VendaFormProps) {
                     item.valor_unitario,
                     item.desconto,
                   )
-                  const catalogo = buscarProdutoOpcao(item.produto, opcoesProduto)
+                  const catalogo = produtoCatalogoDoItem(item, opcoesProduto)
                   const estoqueInsuficiente =
                     catalogo && item.quantidade > catalogo.estoque_atual
+                  const isOutro = item.produtoSelecionado === PRODUTO_OUTRO_VALUE
                   return (
                     <tr key={item.key}>
-                      <td>
-                        <input
-                          type="text"
-                          className="form-input"
-                          placeholder="Produto"
-                          list="produtos-estoque-list"
-                          value={item.produto}
-                          onChange={(e) => atualizarItem(item.key, 'produto', e.target.value)}
-                          onBlur={(e) => aoConfirmarProduto(item.key, e.target.value)}
+                      <td className="venda-produto-cell">
+                        <select
+                          className="form-select"
+                          value={item.produtoSelecionado}
+                          onChange={(e) => selecionarProdutoItem(item.key, e.target.value)}
                           required
-                        />
+                        >
+                          <option value="">Selecione o produto...</option>
+                          {opcoesProduto.map((p) => (
+                            <option key={p.id} value={String(p.id)}>
+                              {p.nome}
+                            </option>
+                          ))}
+                          <option value={PRODUTO_OUTRO_VALUE}>Outro (digitar nome)</option>
+                        </select>
+                        {isOutro && (
+                          <input
+                            type="text"
+                            className="form-input"
+                            style={{ marginTop: '0.35rem' }}
+                            placeholder="Nome do produto"
+                            value={item.produtoOutro}
+                            onChange={(e) => atualizarProdutoOutro(item.key, e.target.value)}
+                            required
+                          />
+                        )}
                         {catalogo && (
                           <span
                             className={`form-hint ${estoqueInsuficiente ? 'text-saida' : ''}`}
                           >
                             Estoque: {catalogo.estoque_atual}
                             {estoqueInsuficiente && ' (insuficiente)'}
+                          </span>
+                        )}
+                        {isOutro && (
+                          <span className="form-hint">
+                            Produto avulso — não cadastrado no estoque
                           </span>
                         )}
                       </td>
