@@ -2,7 +2,7 @@ import { useEffect, useState, FormEvent } from 'react'
 import { Save, Trash2, Search, Pencil, ArrowDownCircle } from 'lucide-react'
 import { api } from '../api'
 import { formatarMoeda, formatarDataIso, toDateInput } from '../utils'
-import type { ContaPagar, ContaPagarCreate } from '../types'
+import type { ContaPagar, ContaPagarCreate, Fornecedor } from '../types'
 
 interface NovaContaPagarPageProps {
   onRefresh?: () => void
@@ -14,7 +14,6 @@ const formInicial = (): ContaPagarCreate => ({
   categoria: 'Fornecedor',
   valor: 0,
   data_vencimento: toDateInput(),
-  is_dda: false,
   linha_digitavel: '',
   observacao: '',
 })
@@ -22,6 +21,7 @@ const formInicial = (): ContaPagarCreate => ({
 export function NovaContaPagarPage({ onRefresh }: NovaContaPagarPageProps) {
   const [form, setForm] = useState<ContaPagarCreate>(formInicial)
   const [contas, setContas] = useState<ContaPagar[]>([])
+  const [fornecedoresCadastro, setFornecedoresCadastro] = useState<Fornecedor[]>([])
   const [categorias, setCategorias] = useState<string[]>([])
   const [busca, setBusca] = useState('')
   const [loading, setLoading] = useState(true)
@@ -44,6 +44,7 @@ export function NovaContaPagarPage({ onRefresh }: NovaContaPagarPageProps) {
 
   useEffect(() => {
     api.getCategoriasSaida().then(setCategorias)
+    api.getFornecedores({ ativo: 'true', limite: '500' }).then(setFornecedoresCadastro).catch(() => [])
   }, [])
 
   useEffect(() => {
@@ -64,8 +65,8 @@ export function NovaContaPagarPage({ onRefresh }: NovaContaPagarPageProps) {
       categoria: conta.categoria,
       valor: conta.valor,
       data_vencimento: conta.data_vencimento,
-      is_dda: conta.is_dda,
       linha_digitavel: conta.linha_digitavel ?? '',
+      fornecedor_id: conta.fornecedor_id ?? undefined,
       observacao: conta.observacao ?? '',
     })
     setError('')
@@ -138,7 +139,7 @@ export function NovaContaPagarPage({ onRefresh }: NovaContaPagarPageProps) {
         </p>
       </div>
 
-      <div className="form-card" style={{ marginBottom: '1.5rem', maxWidth: '100%' }}>
+      <div className="form-card form-card--full form-card--stack">
         <h3 className="chart-title" style={{ marginBottom: '1rem' }}>
           {editando ? `Editar Conta #${editando.id}` : 'Registrar Conta Avulsa'}
         </h3>
@@ -148,6 +149,33 @@ export function NovaContaPagarPage({ onRefresh }: NovaContaPagarPageProps) {
 
         <form onSubmit={handleSubmit}>
           <div className="form-grid">
+            {fornecedoresCadastro.length > 0 && (
+              <div className="form-group full-width">
+                <label className="form-label">Fornecedor cadastrado (CPF/CNPJ)</label>
+                <select
+                  className="form-select"
+                  value={form.fornecedor_id ?? ''}
+                  onChange={(e) => {
+                    const id = e.target.value ? Number(e.target.value) : undefined
+                    const selecionado = fornecedoresCadastro.find((f) => f.id === id)
+                    setForm((prev) => ({
+                      ...prev,
+                      fornecedor_id: id,
+                      fornecedor: selecionado?.nome ?? prev.fornecedor,
+                    }))
+                    setSucesso(false)
+                  }}
+                >
+                  <option value="">Selecionar fornecedor cadastrado...</option>
+                  {fornecedoresCadastro.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.nome} — {f.documento_formatado}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <div className="form-group">
               <label className="form-label">Fornecedor</label>
               <input
@@ -214,21 +242,10 @@ export function NovaContaPagarPage({ onRefresh }: NovaContaPagarPageProps) {
               <input
                 type="text"
                 className="form-input"
-                placeholder="Para boletos e DDA"
+                placeholder="Para boletos"
                 value={form.linha_digitavel || ''}
                 onChange={(e) => handleChange('linha_digitavel', e.target.value)}
               />
-            </div>
-
-            <div className="form-group full-width">
-              <label className="import-checkbox">
-                <input
-                  type="checkbox"
-                  checked={form.is_dda}
-                  onChange={(e) => handleChange('is_dda', e.target.checked)}
-                />
-                Débito automático (DDA) — aparece em DDA em Aberto até confirmar
-              </label>
             </div>
 
             <div className="form-group full-width">
@@ -285,7 +302,6 @@ export function NovaContaPagarPage({ onRefresh }: NovaContaPagarPageProps) {
                   <th>Vencimento</th>
                   <th>Fornecedor</th>
                   <th>Descrição</th>
-                  <th>DDA</th>
                   <th>Valor</th>
                   <th>Ações</th>
                 </tr>
@@ -296,7 +312,6 @@ export function NovaContaPagarPage({ onRefresh }: NovaContaPagarPageProps) {
                     <td>{formatarDataIso(conta.data_vencimento)}</td>
                     <td>{conta.fornecedor}</td>
                     <td>{conta.descricao}</td>
-                    <td>{conta.is_dda ? 'Sim' : 'Não'}</td>
                     <td><strong className="text-saida">{formatarMoeda(conta.valor)}</strong></td>
                     <td className="actions">
                       <button className="btn btn-secondary btn-sm" onClick={() => iniciarEdicao(conta)}>

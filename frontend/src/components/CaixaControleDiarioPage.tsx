@@ -10,8 +10,13 @@ import { api } from '../api'
 import { formatarMoeda, toDateInput } from '../utils'
 import { KPICard } from './KPICard'
 import type { CaixaDiario } from '../types'
+import type { Pagina } from '../navigation'
 
-export function CaixaControleDiarioPage() {
+interface CaixaControleDiarioPageProps {
+  onNavigate?: (pagina: Pagina) => void
+}
+
+export function CaixaControleDiarioPage({ onNavigate }: CaixaControleDiarioPageProps) {
   const [dataSelecionada, setDataSelecionada] = useState(toDateInput())
   const [caixa, setCaixa] = useState<CaixaDiario | null>(null)
   const [loading, setLoading] = useState(true)
@@ -44,7 +49,7 @@ export function CaixaControleDiarioPage() {
         </p>
       </div>
 
-      <div className="form-card" style={{ marginBottom: '1.5rem', maxWidth: '100%' }}>
+      <div className="form-card form-card--full form-card--stack">
         <div className="form-group" style={{ maxWidth: 220 }}>
           <label className="form-label">Data</label>
           <input
@@ -110,8 +115,20 @@ export function CaixaControleDiarioPage() {
             )}
           </div>
 
+          {onNavigate && (
+            <div className="form-actions" style={{ marginBottom: '1.5rem' }}>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => onNavigate('saidas-diarias')}
+              >
+                Registrar saída do dia
+              </button>
+            </div>
+          )}
+
           {!caixa?.aberto && (
-            <div className="form-card" style={{ marginBottom: '1.5rem' }}>
+            <div className="form-card form-card--full form-card--stack">
               <p style={{ color: 'var(--text-muted)' }}>
                 Nenhuma abertura de caixa registrada para esta data. Use{' '}
                 <strong>Abertura e Fechamento</strong> para registrar o dia.

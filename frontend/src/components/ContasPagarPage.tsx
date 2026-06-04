@@ -5,20 +5,26 @@ import {
   CheckCircle,
   AlertTriangle,
   Wallet,
-  Landmark,
+  CalendarClock,
 } from 'lucide-react'
 import { api } from '../api'
-import { diasAteVencimento, labelVencimentoConta, tipoContaPagarLabel } from '../contasPagarUi'
+import {
+  diasAteVencimento,
+  labelVencimentoConta,
+  tipoContaPagarLabel,
+  venceEmProximosDias,
+} from '../contasPagarUi'
 import { formatarMoeda, formatarDataIso } from '../utils'
 import { KPICard } from './KPICard'
 import { BaixaContaPagarModal } from './BaixaContaPagarModal'
+import { ContasPagarVencimentoAlerta } from './ContasPagarVencimentoAlerta'
 import type { ContaPagar, ContasPagarResumo } from '../types'
 
 interface ContasPagarPageProps {
   onRefresh?: () => void
 }
 
-type TipoFiltro = '' | 'avulsa' | 'recorrente' | 'dda'
+type TipoFiltro = '' | 'avulsa' | 'recorrente'
 
 export function ContasPagarPage({ onRefresh }: ContasPagarPageProps) {
   const [contas, setContas] = useState<ContaPagar[]>([])
@@ -34,7 +40,6 @@ export function ContasPagarPage({ onRefresh }: ContasPagarPageProps) {
     setErro('')
     try {
       const params: Record<string, string> = { status: 'pendente', limite: '500' }
-      if (busca) params.busca = busca
       const [contasData, resumoData] = await Promise.all([
         api.getContasPagar(params),
         api.getContasPagarResumo(),
@@ -50,18 +55,35 @@ export function ContasPagarPage({ onRefresh }: ContasPagarPageProps) {
   }
 
   useEffect(() => {
-    const timer = setTimeout(carregar, 300)
-    return () => clearTimeout(timer)
-  }, [busca])
+    carregar()
+  }, [])
+
+  const contasProximos3Dias = useMemo(() => {
+    return contas
+      .filter((c) => venceEmProximosDias(c.data_vencimento, 3))
+      .sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento))
+  }, [contas])
+
+  const totalProximos3Dias = useMemo(
+    () => contasProximos3Dias.reduce((s, c) => s + c.valor, 0),
+    [contasProximos3Dias],
+  )
 
   const contasFiltradas = useMemo(() => {
+    const termo = busca.trim().toLowerCase()
     return contas.filter((c) => {
-      if (filtroTipo === 'dda') return c.is_dda
-      if (filtroTipo === 'recorrente') return Boolean(c.recorrente_id) && !c.is_dda
-      if (filtroTipo === 'avulsa') return !c.recorrente_id && !c.is_dda
+      if (termo) {
+        const match =
+          c.fornecedor.toLowerCase().includes(termo)
+          || c.descricao.toLowerCase().includes(termo)
+          || (c.observacao?.toLowerCase().includes(termo) ?? false)
+        if (!match) return false
+      }
+      if (filtroTipo === 'recorrente') return Boolean(c.recorrente_id)
+      if (filtroTipo === 'avulsa') return !c.recorrente_id
       return true
     })
-  }, [contas, filtroTipo])
+  }, [contas, busca, filtroTipo])
 
   function aoConcluir() {
     carregar()
@@ -73,7 +95,7 @@ export function ContasPagarPage({ onRefresh }: ContasPagarPageProps) {
       <div className="page-header">
         <h1 className="page-title">Contas a Pagar — Visão Geral</h1>
         <p className="page-subtitle">
-          Obrigações pendentes: avulsas, recorrentes e débito automático (DDA)
+          Obrigações pendentes: avulsas e recorrentes
         </p>
       </div>
 
@@ -86,20 +108,31 @@ export function ContasPagarPage({ onRefresh }: ContasPagarPageProps) {
           subtitle={`${resumo?.quantidade_pendente ?? 0} conta${(resumo?.quantidade_pendente ?? 0) !== 1 ? 's' : ''} pendente${(resumo?.quantidade_pendente ?? 0) !== 1 ? 's' : ''}`}
         />
         <KPICard
-          label="DDA em Aberto"
-          value={formatarMoeda(resumo?.total_dda ?? 0)}
-          icon={Landmark}
-          iconColor="gold"
-          subtitle={`${resumo?.quantidade_dda ?? 0} débito${(resumo?.quantidade_dda ?? 0) !== 1 ? 's' : ''} automático${(resumo?.quantidade_dda ?? 0) !== 1 ? 's' : ''}`}
-        />
-        <KPICard
           label="Vencidas"
           value={formatarMoeda(resumo?.total_vencidas ?? 0)}
           icon={AlertTriangle}
           iconColor="purple"
           subtitle={`${resumo?.quantidade_vencidas ?? 0} conta${(resumo?.quantidade_vencidas ?? 0) !== 1 ? 's' : ''} em atraso`}
         />
+        <KPICard
+          label="Vencem em 3 dias"
+          value={contasProximos3Dias.length.toString()}
+          icon={CalendarClock}
+          iconColor="gold"
+          subtitle={
+            contasProximos3Dias.length > 0
+              ? `Total ${formatarMoeda(totalProximos3Dias)}`
+              : 'Nenhuma conta neste prazo'
+          }
+        />
       </div>
+
+      {!loading && (
+        <ContasPagarVencimentoAlerta
+          contas={contasProximos3Dias}
+          onPagar={setContaBaixando}
+        />
+      )}
 
       {erro && <div className="error-message">{erro}</div>}
 
@@ -132,7 +165,6 @@ export function ContasPagarPage({ onRefresh }: ContasPagarPageProps) {
             <option value="">Todos os tipos</option>
             <option value="avulsa">Avulsas</option>
             <option value="recorrente">Recorrentes</option>
-            <option value="dda">DDA</option>
           </select>
         </div>
 
@@ -164,7 +196,7 @@ export function ContasPagarPage({ onRefresh }: ContasPagarPageProps) {
                   return (
                     <tr key={conta.id}>
                       <td>
-                        <span className={`badge ${conta.is_dda ? 'badge-av' : ''}`}>
+                        <span className="badge">
                           {tipoContaPagarLabel(conta)}
                         </span>
                       </td>

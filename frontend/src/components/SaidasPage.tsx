@@ -19,11 +19,11 @@ const formInicial: SaidaCreate = {
 }
 
 export function SaidasPage({ onRefresh, variant = 'contas-a-pagar' }: SaidasPageProps) {
-  const titulo = variant === 'contas-a-pagar' ? 'Contas a Pagar' : 'Saídas'
+  const titulo = variant === 'contas-a-pagar' ? 'Contas a Pagar' : 'Saídas Diárias'
   const subtitulo =
     variant === 'contas-a-pagar'
       ? 'Despesas, fornecedores e obrigações da loja'
-      : 'Registre despesas e gastos da loja'
+      : 'Registre despesas pagas no dia — afetam o caixa e o fluxo financeiro'
   const [form, setForm] = useState<SaidaCreate>(formInicial)
   const [saidas, setSaidas] = useState<Saida[]>([])
   const [categorias, setCategorias] = useState<string[]>([])
@@ -137,7 +137,7 @@ export function SaidasPage({ onRefresh, variant = 'contas-a-pagar' }: SaidasPage
         <p className="page-subtitle">{subtitulo}</p>
       </div>
 
-      <div className="form-card" style={{ marginBottom: '1.5rem', maxWidth: '100%' }}>
+      <div className="form-card form-card--full form-card--stack">
         <h3 className="chart-title" style={{ marginBottom: '1rem' }}>
           {editando
             ? `Editar ${variant === 'contas-a-pagar' ? 'Conta' : 'Saída'} #${editando.id}`

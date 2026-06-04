@@ -246,13 +246,6 @@ class SaidaBase(BaseModel):
             raise ValueError(f"Forma de pagamento inválida. Opções: {', '.join(FORMAS_PAGAMENTO)}")
         return value
 
-    @field_validator("categoria")
-    @classmethod
-    def validar_categoria(cls, value: str) -> str:
-        if value not in CATEGORIAS_SAIDA:
-            raise ValueError(f"Categoria inválida. Opções: {', '.join(CATEGORIAS_SAIDA)}")
-        return value
-
 
 class SaidaCreate(SaidaBase):
     pass
@@ -271,13 +264,6 @@ class SaidaUpdate(BaseModel):
     def validar_forma_pagamento(cls, value: str | None) -> str | None:
         if value is not None and value not in FORMAS_PAGAMENTO:
             raise ValueError(f"Forma de pagamento inválida. Opções: {', '.join(FORMAS_PAGAMENTO)}")
-        return value
-
-    @field_validator("categoria")
-    @classmethod
-    def validar_categoria(cls, value: str | None) -> str | None:
-        if value is not None and value not in CATEGORIAS_SAIDA:
-            raise ValueError(f"Categoria inválida. Opções: {', '.join(CATEGORIAS_SAIDA)}")
         return value
 
 
@@ -411,13 +397,6 @@ class ProdutoBase(BaseModel):
     ativo: bool = True
     observacao: str | None = Field(default=None, max_length=500)
 
-    @field_validator("categoria")
-    @classmethod
-    def validar_categoria_produto(cls, value: str) -> str:
-        if value not in CATEGORIAS_PRODUTO:
-            raise ValueError(f"Categoria inválida. Opções: {', '.join(CATEGORIAS_PRODUTO)}")
-        return value
-
 
 class ProdutoCreate(ProdutoBase):
     pass
@@ -431,13 +410,6 @@ class ProdutoUpdate(BaseModel):
     unidade: str | None = Field(default=None, max_length=20)
     ativo: bool | None = None
     observacao: str | None = Field(default=None, max_length=500)
-
-    @field_validator("categoria")
-    @classmethod
-    def validar_categoria_produto(cls, value: str | None) -> str | None:
-        if value is not None and value not in CATEGORIAS_PRODUTO:
-            raise ValueError(f"Categoria inválida. Opções: {', '.join(CATEGORIAS_PRODUTO)}")
-        return value
 
 
 class ProdutoResponse(ProdutoBase):
@@ -648,6 +620,109 @@ class GerarCobrancasResultado(BaseModel):
 STATUS_CONTA_PAGAR = ["pendente", "pago"]
 
 
+class FornecedorBase(BaseModel):
+    nome: str = Field(..., min_length=1, max_length=200)
+    documento: str = Field(..., min_length=11, max_length=18)
+    ativo: bool = True
+    observacao: str | None = Field(default=None, max_length=500)
+
+
+class FornecedorCreate(FornecedorBase):
+    pass
+
+
+class FornecedorUpdate(BaseModel):
+    nome: str | None = Field(default=None, min_length=1, max_length=200)
+    documento: str | None = Field(default=None, min_length=11, max_length=18)
+    ativo: bool | None = None
+    observacao: str | None = Field(default=None, max_length=500)
+
+
+class FornecedorResponse(BaseModel):
+    id: int
+    nome: str
+    documento: str
+    tipo_documento: str
+    documento_formatado: str
+    ativo: bool
+    observacao: str | None = None
+    criado_em: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ClienteBase(BaseModel):
+    nome: str = Field(..., min_length=1, max_length=200)
+    documento: str | None = Field(default=None, max_length=18)
+    telefone: str | None = Field(default=None, max_length=30)
+    email: str | None = Field(default=None, max_length=200)
+    ativo: bool = True
+    observacao: str | None = Field(default=None, max_length=500)
+
+
+class ClienteCreate(ClienteBase):
+    pass
+
+
+class ClienteUpdate(BaseModel):
+    nome: str | None = Field(default=None, min_length=1, max_length=200)
+    documento: str | None = Field(default=None, max_length=18)
+    telefone: str | None = Field(default=None, max_length=30)
+    email: str | None = Field(default=None, max_length=200)
+    ativo: bool | None = None
+    observacao: str | None = Field(default=None, max_length=500)
+
+
+class ClienteResponse(BaseModel):
+    id: int
+    nome: str
+    documento: str | None = None
+    tipo_documento: str | None = None
+    documento_formatado: str | None = None
+    telefone: str | None = None
+    email: str | None = None
+    ativo: bool
+    observacao: str | None = None
+    criado_em: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class CategoriaBase(BaseModel):
+    nome: str = Field(..., min_length=1, max_length=50)
+    tipo: str = Field(..., pattern="^(produto|saida)$")
+    ativo: bool = True
+
+
+class CategoriaCreate(CategoriaBase):
+    pass
+
+
+class CategoriaUpdate(BaseModel):
+    nome: str | None = Field(default=None, min_length=1, max_length=50)
+    tipo: str | None = Field(default=None, pattern="^(produto|saida)$")
+    ativo: bool | None = None
+
+
+class CategoriaResponse(CategoriaBase):
+    id: int
+    criado_em: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class DdaConfigResponse(BaseModel):
+    cnpj_pagador: str | None = None
+    cpf_pagador: str | None = None
+    cnpj_pagador_formatado: str | None = None
+    cpf_pagador_formatado: str | None = None
+
+
+class DdaConfigUpdate(BaseModel):
+    cnpj_pagador: str | None = Field(default=None, max_length=18)
+    cpf_pagador: str | None = Field(default=None, max_length=14)
+
+
 class ContaPagarRecorrenteBase(BaseModel):
     fornecedor: str = Field(..., min_length=1, max_length=200)
     descricao: str = Field(..., min_length=1, max_length=200)
@@ -657,6 +732,7 @@ class ContaPagarRecorrenteBase(BaseModel):
     frequencia: str = Field(default="Mensal")
     ativo: bool = True
     is_dda: bool = False
+    fornecedor_id: int | None = None
     observacao: str | None = Field(default=None, max_length=500)
 
     @field_validator("frequencia")
@@ -664,13 +740,6 @@ class ContaPagarRecorrenteBase(BaseModel):
     def validar_frequencia(cls, value: str) -> str:
         if value not in FREQUENCIAS_RECORRENTE:
             raise ValueError(f"Frequência inválida. Opções: {', '.join(FREQUENCIAS_RECORRENTE)}")
-        return value
-
-    @field_validator("categoria")
-    @classmethod
-    def validar_categoria(cls, value: str) -> str:
-        if value not in CATEGORIAS_SAIDA:
-            raise ValueError(f"Categoria inválida. Opções: {', '.join(CATEGORIAS_SAIDA)}")
         return value
 
 
@@ -687,6 +756,7 @@ class ContaPagarRecorrenteUpdate(BaseModel):
     frequencia: str | None = None
     ativo: bool | None = None
     is_dda: bool | None = None
+    fornecedor_id: int | None = None
     observacao: str | None = Field(default=None, max_length=500)
 
     @field_validator("frequencia")
@@ -694,13 +764,6 @@ class ContaPagarRecorrenteUpdate(BaseModel):
     def validar_frequencia(cls, value: str | None) -> str | None:
         if value is not None and value not in FREQUENCIAS_RECORRENTE:
             raise ValueError(f"Frequência inválida. Opções: {', '.join(FREQUENCIAS_RECORRENTE)}")
-        return value
-
-    @field_validator("categoria")
-    @classmethod
-    def validar_categoria(cls, value: str | None) -> str | None:
-        if value is not None and value not in CATEGORIAS_SAIDA:
-            raise ValueError(f"Categoria inválida. Opções: {', '.join(CATEGORIAS_SAIDA)}")
         return value
 
 
@@ -719,14 +782,9 @@ class ContaPagarBase(BaseModel):
     data_vencimento: date
     is_dda: bool = False
     linha_digitavel: str | None = Field(default=None, max_length=100)
+    fornecedor_id: int | None = None
+    documento_beneficiario: str | None = Field(default=None, max_length=18)
     observacao: str | None = Field(default=None, max_length=500)
-
-    @field_validator("categoria")
-    @classmethod
-    def validar_categoria(cls, value: str) -> str:
-        if value not in CATEGORIAS_SAIDA:
-            raise ValueError(f"Categoria inválida. Opções: {', '.join(CATEGORIAS_SAIDA)}")
-        return value
 
 
 class ContaPagarCreate(ContaPagarBase):
@@ -741,14 +799,9 @@ class ContaPagarUpdate(BaseModel):
     data_vencimento: date | None = None
     is_dda: bool | None = None
     linha_digitavel: str | None = Field(default=None, max_length=100)
+    fornecedor_id: int | None = None
+    documento_beneficiario: str | None = Field(default=None, max_length=18)
     observacao: str | None = Field(default=None, max_length=500)
-
-    @field_validator("categoria")
-    @classmethod
-    def validar_categoria(cls, value: str | None) -> str | None:
-        if value is not None and value not in CATEGORIAS_SAIDA:
-            raise ValueError(f"Categoria inválida. Opções: {', '.join(CATEGORIAS_SAIDA)}")
-        return value
 
 
 class ContaPagarBaixa(BaseModel):
@@ -770,6 +823,9 @@ class ContaPagarResponse(ContaPagarBase):
     recorrente_id: int | None = None
     referencia_mes: str | None = None
     saida_id: int | None = None
+    documento_beneficiario_formatado: str | None = None
+    fornecedor_documento: str | None = None
+    fornecedor_documento_formatado: str | None = None
     criado_em: datetime
 
     model_config = {"from_attributes": True}

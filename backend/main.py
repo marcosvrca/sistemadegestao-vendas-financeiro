@@ -13,7 +13,6 @@ from database import engine, get_db, migrar_banco
 from excel_import import CAMPOS_OBRIGATORIOS, CAMPOS_OPCIONAIS, parsear_planilha
 from models import CaixaDiario, ItemVenda, Saida, Venda
 from schemas import (
-    CATEGORIAS_SAIDA,
     DashboardKPIs,
     FORMAS_PAGAMENTO,
     FORMAS_PAGAMENTO_VENDA,
@@ -44,6 +43,7 @@ from schemas import (
     CaixaResumoSistema,
 )
 from caixa_utils import calcular_resumo_sistema, calcular_saldo_esperado
+from categorias_utils import TIPO_CATEGORIA_SAIDA, assert_categoria_valida
 from dashboard_filtros import (
     FiltrosDashboard,
     agrupar_registros_por_periodo,
@@ -58,6 +58,9 @@ from venda_utils import calcular_valor_item, normalizar_data_venda, sincronizar_
 from estoque_api import router as estoque_router
 from contas_receber_api import router as contas_receber_router
 from contas_pagar_api import router as contas_pagar_router
+from fornecedores_api import router as fornecedores_router
+from clientes_api import router as clientes_router
+from categorias_api import router as categorias_router
 from estoque_utils import (
     aplicar_itens_venda_estoque,
     estornar_itens_venda_estoque,
@@ -71,6 +74,9 @@ app = FastAPI(title="Recanto da Fé - Sistema de Vendas")
 app.include_router(estoque_router)
 app.include_router(contas_receber_router)
 app.include_router(contas_pagar_router)
+app.include_router(fornecedores_router)
+app.include_router(clientes_router)
+app.include_router(categorias_router)
 
 app.add_middleware(
     CORSMiddleware,
@@ -663,11 +669,6 @@ def confrontar_dados(
     return confrontar_periodos(db, data_a_inicio, data_a_fim, data_b_inicio, data_b_fim)
 
 
-@app.get("/api/categorias-saida")
-def listar_categorias_saida():
-    return CATEGORIAS_SAIDA
-
-
 @app.get("/api/saidas", response_model=list[SaidaResponse])
 def listar_saidas(
     db: Session = Depends(get_db),
@@ -699,10 +700,11 @@ def obter_saida(saida_id: int, db: Session = Depends(get_db)):
 
 @app.post("/api/saidas", response_model=SaidaResponse, status_code=201)
 def criar_saida(saida: SaidaCreate, db: Session = Depends(get_db)):
+    categoria = assert_categoria_valida(db, TIPO_CATEGORIA_SAIDA, saida.categoria)
     nova = Saida(
         data=normalizar_data_venda(saida.data),
         descricao=saida.descricao,
-        categoria=saida.categoria,
+        categoria=categoria,
         valor=round(saida.valor, 2),
         forma_pagamento=saida.forma_pagamento,
         observacao=saida.observacao,
@@ -722,6 +724,8 @@ def atualizar_saida(saida_id: int, dados: SaidaUpdate, db: Session = Depends(get
     campos = dados.model_dump(exclude_unset=True)
     if "data" in campos:
         campos["data"] = normalizar_data_venda(campos["data"])
+    if "categoria" in campos and campos["categoria"] is not None:
+        campos["categoria"] = assert_categoria_valida(db, TIPO_CATEGORIA_SAIDA, campos["categoria"])
     for campo, valor in campos.items():
         setattr(saida, campo, valor)
 

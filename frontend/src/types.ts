@@ -309,6 +309,62 @@ export interface GerarCobrancasResultado {
   contas: ContaReceber[]
 }
 
+export interface Fornecedor {
+  id: number
+  nome: string
+  documento: string
+  tipo_documento: 'cpf' | 'cnpj'
+  documento_formatado: string
+  ativo: boolean
+  observacao?: string | null
+  criado_em: string
+}
+
+export interface FornecedorCreate {
+  nome: string
+  documento: string
+  ativo?: boolean
+  observacao?: string
+}
+
+export interface Cliente {
+  id: number
+  nome: string
+  documento?: string | null
+  tipo_documento?: 'cpf' | 'cnpj' | null
+  documento_formatado?: string | null
+  telefone?: string | null
+  email?: string | null
+  ativo: boolean
+  observacao?: string | null
+  criado_em: string
+}
+
+export interface ClienteCreate {
+  nome: string
+  documento?: string
+  telefone?: string
+  email?: string
+  ativo?: boolean
+  observacao?: string
+}
+
+export type TipoCategoria = 'produto' | 'saida'
+
+export interface Categoria {
+  id: number
+  nome: string
+  tipo: TipoCategoria
+  ativo: boolean
+  criado_em: string
+}
+
+export interface CategoriaCreate {
+  nome: string
+  tipo: TipoCategoria
+  ativo?: boolean
+}
+
 export interface ContaPagarRecorrente {
   id: number
   fornecedor: string
@@ -319,6 +375,7 @@ export interface ContaPagarRecorrente {
   frequencia: string
   ativo: boolean
   is_dda: boolean
+  fornecedor_id?: number | null
   observacao?: string | null
   criado_em: string
 }
@@ -332,6 +389,7 @@ export interface ContaPagarRecorrenteCreate {
   frequencia: string
   ativo?: boolean
   is_dda?: boolean
+  fornecedor_id?: number | null
   observacao?: string
 }
 
@@ -345,6 +403,11 @@ export interface ContaPagar {
   status: 'pendente' | 'pago'
   is_dda: boolean
   linha_digitavel?: string | null
+  fornecedor_id?: number | null
+  documento_beneficiario?: string | null
+  documento_beneficiario_formatado?: string | null
+  fornecedor_documento?: string | null
+  fornecedor_documento_formatado?: string | null
   forma_pagamento?: string | null
   data_pagamento?: string | null
   recorrente_id?: number | null
@@ -362,6 +425,8 @@ export interface ContaPagarCreate {
   data_vencimento: string
   is_dda?: boolean
   linha_digitavel?: string
+  fornecedor_id?: number | null
+  documento_beneficiario?: string
   observacao?: string
 }
 

@@ -1,4 +1,5 @@
 import { Construction } from 'lucide-react'
+import { PageShell } from './PageShell'
 import type { Pagina } from '../navigation'
 import { EM_BREVE_CONFIG } from '../navigation'
 
@@ -18,18 +19,13 @@ export function EmBrevePage({ pagina, onNavigate }: EmBrevePageProps) {
   }
 
   return (
-    <div>
-      <div className="page-header">
-        <h1 className="page-title">{config.titulo}</h1>
-        <p className="page-subtitle">{config.descricao}</p>
-      </div>
-
-      <div className="form-card em-breve-card">
+    <PageShell title={config.titulo} subtitle={config.descricao} width="form">
+      <div className="form-card form-card--full em-breve-card">
         <div className="em-breve-icon">
           <Construction size={40} />
         </div>
         <h3 className="chart-title">Em desenvolvimento</h3>
-        <p style={{ color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
+        <p className="em-breve-desc">
           Esta tela já está prevista no sistema. Em breve implementaremos as regras de negócio.
         </p>
 
@@ -58,6 +54,6 @@ export function EmBrevePage({ pagina, onNavigate }: EmBrevePageProps) {
           </div>
         )}
       </div>
-    </div>
+    </PageShell>
   )
 }

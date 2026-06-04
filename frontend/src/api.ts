@@ -40,6 +40,12 @@ import type {
   ContaPagarRecorrenteCreate,
   ContasPagarResumo,
   GerarContasPagarResultado,
+  Fornecedor,
+  FornecedorCreate,
+  Cliente,
+  ClienteCreate,
+  Categoria,
+  CategoriaCreate,
 } from './types'
 
 const API = '/api'
@@ -380,4 +386,64 @@ export const api = {
     fetchJson<GerarContasPagarResultado>(`${API}/contas-pagar-recorrentes/gerar-contas-mes`, {
       method: 'POST',
     }),
+
+  getFornecedores: (params?: Record<string, string>) =>
+    fetchJson<Fornecedor[]>(`${API}/fornecedores${queryString(params)}`),
+
+  createFornecedor: (dados: FornecedorCreate) =>
+    fetchJson<Fornecedor>(`${API}/fornecedores`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dados),
+    }),
+
+  updateFornecedor: (id: number, dados: Partial<FornecedorCreate>) =>
+    fetchJson<Fornecedor>(`${API}/fornecedores/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dados),
+    }),
+
+  deleteFornecedor: (id: number) =>
+    fetchJson<void>(`${API}/fornecedores/${id}`, { method: 'DELETE' }),
+
+  getClientes: (params?: Record<string, string>) =>
+    fetchJson<Cliente[]>(`${API}/clientes${queryString(params)}`),
+
+  createCliente: (dados: ClienteCreate) =>
+    fetchJson<Cliente>(`${API}/clientes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dados),
+    }),
+
+  updateCliente: (id: number, dados: Partial<ClienteCreate>) =>
+    fetchJson<Cliente>(`${API}/clientes/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dados),
+    }),
+
+  deleteCliente: (id: number) =>
+    fetchJson<void>(`${API}/clientes/${id}`, { method: 'DELETE' }),
+
+  getCategorias: (params?: Record<string, string>) =>
+    fetchJson<Categoria[]>(`${API}/categorias${queryString(params)}`),
+
+  createCategoria: (dados: CategoriaCreate) =>
+    fetchJson<Categoria>(`${API}/categorias`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dados),
+    }),
+
+  updateCategoria: (id: number, dados: Partial<CategoriaCreate>) =>
+    fetchJson<Categoria>(`${API}/categorias/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dados),
+    }),
+
+  deleteCategoria: (id: number) =>
+    fetchJson<void>(`${API}/categorias/${id}`, { method: 'DELETE' }),
 }

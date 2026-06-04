@@ -94,7 +94,7 @@ export function CaixaVisaoGeralPage({ onNavigate }: CaixaVisaoGeralPageProps) {
       </div>
 
       {!loading && caixaHoje?.aberto && (
-        <div className="form-card" style={{ marginBottom: '1.5rem' }}>
+        <div className="form-card form-card--full form-card--stack">
           <h3 className="chart-title" style={{ marginBottom: '0.75rem' }}>Hoje em detalhe</h3>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '1rem' }}>
             Faturamento: {formatarMoeda(caixaHoje.resumo_sistema.faturamento)} · Dinheiro:{' '}

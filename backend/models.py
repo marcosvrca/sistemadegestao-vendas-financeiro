@@ -130,6 +130,48 @@ class Configuracao(Base):
     valor: Mapped[str] = mapped_column(String(500))
 
 
+class Fornecedor(Base):
+    __tablename__ = "fornecedores"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    nome: Mapped[str] = mapped_column(String(200), index=True)
+    documento: Mapped[str] = mapped_column(String(14), unique=True, index=True)
+    tipo_documento: Mapped[str] = mapped_column(String(4), index=True)
+    ativo: Mapped[bool] = mapped_column(default=True, index=True)
+    observacao: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+    contas: Mapped[list["ContaPagar"]] = relationship(back_populates="fornecedor_cadastro")
+    contas_recorrentes: Mapped[list["ContaPagarRecorrente"]] = relationship(
+        back_populates="fornecedor_cadastro",
+    )
+
+
+class Cliente(Base):
+    __tablename__ = "clientes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    nome: Mapped[str] = mapped_column(String(200), index=True)
+    documento: Mapped[str | None] = mapped_column(String(14), nullable=True, index=True)
+    tipo_documento: Mapped[str | None] = mapped_column(String(4), nullable=True)
+    telefone: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    email: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    ativo: Mapped[bool] = mapped_column(default=True, index=True)
+    observacao: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+
+class Categoria(Base):
+    __tablename__ = "categorias"
+    __table_args__ = (UniqueConstraint("nome", "tipo", name="uq_categoria_nome_tipo"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    nome: Mapped[str] = mapped_column(String(50), index=True)
+    tipo: Mapped[str] = mapped_column(String(10), index=True)
+    ativo: Mapped[bool] = mapped_column(default=True, index=True)
+    criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+
 class ContaRecorrente(Base):
     __tablename__ = "contas_recorrentes"
 
@@ -193,11 +235,20 @@ class ContaPagarRecorrente(Base):
     ativo: Mapped[bool] = mapped_column(default=True, index=True)
     is_dda: Mapped[bool] = mapped_column(default=False, index=True)
     observacao: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    fornecedor_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("fornecedores.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
 
     contas: Mapped[list["ContaPagar"]] = relationship(
         back_populates="recorrente",
         order_by="ContaPagar.id.desc()",
+    )
+    fornecedor_cadastro: Mapped["Fornecedor | None"] = relationship(
+        back_populates="contas_recorrentes",
     )
 
 
@@ -220,6 +271,13 @@ class ContaPagar(Base):
     status: Mapped[str] = mapped_column(String(20), default="pendente", index=True)
     is_dda: Mapped[bool] = mapped_column(default=False, index=True)
     linha_digitavel: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    documento_beneficiario: Mapped[str | None] = mapped_column(String(14), nullable=True, index=True)
+    fornecedor_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("fornecedores.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     forma_pagamento: Mapped[str | None] = mapped_column(String(50), nullable=True)
     data_pagamento: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     recorrente_id: Mapped[int | None] = mapped_column(
@@ -239,3 +297,4 @@ class ContaPagar(Base):
     criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, index=True)
 
     recorrente: Mapped["ContaPagarRecorrente | None"] = relationship(back_populates="contas")
+    fornecedor_cadastro: Mapped["Fornecedor | None"] = relationship(back_populates="contas")

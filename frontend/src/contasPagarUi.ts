@@ -6,6 +6,12 @@ export function diasAteVencimento(dataVencimento: string): number {
   return Math.floor((hoje.getTime() - venc.getTime()) / 86_400_000)
 }
 
+/** Conta ainda não vencida e com vencimento até N dias à frente (inclusive hoje). */
+export function venceEmProximosDias(dataVencimento: string, dias = 3): boolean {
+  const diff = diasAteVencimento(dataVencimento)
+  return diff <= 0 && diff >= -dias
+}
+
 export function labelVencimentoConta(dias: number): string {
   if (dias > 0) {
     if (dias === 1) return '1 dia atraso'
@@ -18,10 +24,8 @@ export function labelVencimentoConta(dias: number): string {
 }
 
 export function tipoContaPagarLabel(conta: {
-  is_dda: boolean
   recorrente_id?: number | null
 }): string {
-  if (conta.is_dda) return 'DDA'
   if (conta.recorrente_id) return 'Recorrente'
   return 'Avulsa'
 }

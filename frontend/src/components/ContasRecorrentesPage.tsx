@@ -169,7 +169,7 @@ export function ContasRecorrentesPage({ onRefresh }: ContasRecorrentesPageProps)
         </p>
       </div>
 
-      <div className="form-card" style={{ marginBottom: '1.5rem', maxWidth: '100%' }}>
+      <div className="form-card form-card--full form-card--stack">
         <h3 className="chart-title" style={{ marginBottom: '1rem' }}>
           {editando ? `Editar Recorrente #${editando.id}` : 'Nova Conta Recorrente'}
         </h3>

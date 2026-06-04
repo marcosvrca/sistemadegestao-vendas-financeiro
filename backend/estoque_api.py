@@ -61,8 +61,10 @@ def produto_para_response(produto: Produto) -> ProdutoResponse:
 
 
 @router.get("/categorias")
-def listar_categorias_produto():
-    return CATEGORIAS_PRODUTO
+def listar_categorias_produto(db: Session = Depends(get_db)):
+    from categorias_utils import TIPO_CATEGORIA_PRODUTO, listar_nomes_categorias
+
+    return listar_nomes_categorias(db, TIPO_CATEGORIA_PRODUTO)
 
 
 @router.get("/resumo", response_model=EstoqueResumo)
@@ -171,6 +173,9 @@ def obter_produto(produto_id: int, db: Session = Depends(get_db)):
 
 @router.post("/produtos", response_model=ProdutoResponse, status_code=201)
 def criar_produto(dados: ProdutoCreate, db: Session = Depends(get_db)):
+    from categorias_utils import TIPO_CATEGORIA_PRODUTO, assert_categoria_valida
+
+    categoria = assert_categoria_valida(db, TIPO_CATEGORIA_PRODUTO, dados.categoria)
     chave = normalizar_nome_produto(dados.nome)
     if db.query(Produto).filter(Produto.nome_normalizado == chave).first():
         raise HTTPException(status_code=400, detail="Já existe um produto com este nome")
@@ -180,7 +185,7 @@ def criar_produto(dados: ProdutoCreate, db: Session = Depends(get_db)):
     produto = Produto(
         nome=nome_limpo,
         nome_normalizado=chave,
-        categoria=dados.categoria,
+        categoria=categoria,
         preco_venda=round(dados.preco_venda, 2),
         estoque_atual=0,
         estoque_minimo=dados.estoque_minimo,
@@ -216,6 +221,10 @@ def atualizar_produto(
         raise HTTPException(status_code=404, detail="Produto não encontrado")
 
     campos = dados.model_dump(exclude_unset=True)
+    if "categoria" in campos and campos["categoria"] is not None:
+        from categorias_utils import TIPO_CATEGORIA_PRODUTO, assert_categoria_valida
+
+        campos["categoria"] = assert_categoria_valida(db, TIPO_CATEGORIA_PRODUTO, campos["categoria"])
     if "nome" in campos:
         chave = normalizar_nome_produto(campos["nome"])
         existente = (

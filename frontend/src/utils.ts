@@ -78,3 +78,25 @@ export function toDateInput(date: Date = new Date()): string {
   const pad = (n: number) => n.toString().padStart(2, '0')
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 }
+
+export function limparDocumento(valor: string): string {
+  return valor.replace(/\D/g, '')
+}
+
+export function formatarDocumento(documento: string): string {
+  const doc = limparDocumento(documento)
+  if (doc.length === 11) {
+    return `${doc.slice(0, 3)}.${doc.slice(3, 6)}.${doc.slice(6, 9)}-${doc.slice(9)}`
+  }
+  if (doc.length === 14) {
+    return `${doc.slice(0, 2)}.${doc.slice(2, 5)}.${doc.slice(5, 8)}/${doc.slice(8, 12)}-${doc.slice(12)}`
+  }
+  return documento
+}
+
+export function labelTipoDocumento(documento: string): 'CPF' | 'CNPJ' | 'Documento' {
+  const doc = limparDocumento(documento)
+  if (doc.length === 11) return 'CPF'
+  if (doc.length === 14) return 'CNPJ'
+  return 'Documento'
+}

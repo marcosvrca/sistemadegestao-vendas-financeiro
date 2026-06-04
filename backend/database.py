@@ -32,6 +32,9 @@ def migrar_banco() -> None:
         ContaPagarRecorrente,
         ContaReceber,
         ContaRecorrente,
+        Fornecedor,
+        Cliente,
+        Categoria,
         ItemVenda,
         MovimentacaoEstoque,
         Produto,
@@ -43,13 +46,13 @@ def migrar_banco() -> None:
     Base.metadata.create_all(bind=engine)
 
     with engine.connect() as conn:
-        colunas = {row[1] for row in conn.execute(text("PRAGMA table_info(vendas)")).fetchall()}
-        if colunas:
-            if "troco" not in colunas:
+        colunas_vendas = {row[1] for row in conn.execute(text("PRAGMA table_info(vendas)")).fetchall()}
+        if colunas_vendas:
+            if "troco" not in colunas_vendas:
                 conn.execute(text("ALTER TABLE vendas ADD COLUMN troco FLOAT"))
-            if "valor_recebido" not in colunas:
+            if "valor_recebido" not in colunas_vendas:
                 conn.execute(text("ALTER TABLE vendas ADD COLUMN valor_recebido FLOAT"))
-            if "parcelas" not in colunas:
+            if "parcelas" not in colunas_vendas:
                 conn.execute(text("ALTER TABLE vendas ADD COLUMN parcelas INTEGER"))
             conn.execute(
                 text(
@@ -57,7 +60,7 @@ def migrar_banco() -> None:
                     "WHERE forma_pagamento = 'Cartão Crédito' AND parcelas IS NULL"
                 )
             )
-            if "pago_em" not in colunas:
+            if "pago_em" not in colunas_vendas:
                 conn.execute(text("ALTER TABLE vendas ADD COLUMN pago_em DATETIME"))
                 conn.execute(
                     text(
@@ -65,7 +68,36 @@ def migrar_banco() -> None:
                         "WHERE forma_pagamento != 'AV' AND pago_em IS NULL"
                     )
                 )
+
+        colunas_contas = {
+            row[1] for row in conn.execute(text("PRAGMA table_info(contas_pagar)")).fetchall()
+        }
+        if colunas_contas:
+            if "fornecedor_id" not in colunas_contas:
+                conn.execute(text("ALTER TABLE contas_pagar ADD COLUMN fornecedor_id INTEGER"))
+            if "documento_beneficiario" not in colunas_contas:
+                conn.execute(
+                    text("ALTER TABLE contas_pagar ADD COLUMN documento_beneficiario VARCHAR(14)")
+                )
+
+        colunas_rec = {
+            row[1]
+            for row in conn.execute(text("PRAGMA table_info(contas_pagar_recorrentes)")).fetchall()
+        }
+        if colunas_rec and "fornecedor_id" not in colunas_rec:
+            conn.execute(
+                text("ALTER TABLE contas_pagar_recorrentes ADD COLUMN fornecedor_id INTEGER")
+            )
+
         conn.commit()
+
+    db = SessionLocal()
+    try:
+        from categorias_utils import garantir_categorias_padrao
+
+        garantir_categorias_padrao(db)
+    finally:
+        db.close()
 
     db = SessionLocal()
     try:

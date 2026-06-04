@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { TrendingUp } from 'lucide-react'
+import { Filter, TrendingUp } from 'lucide-react'
 import {
   Bar,
   BarChart,
@@ -12,35 +12,41 @@ import {
 } from 'recharts'
 import { api } from '../api'
 import { formatarMoeda, formatarPeriodo } from '../utils'
+import {
+  buildFluxoCaixaQuery,
+  fluxoCaixaFiltrosIniciais,
+  PRESETS_FLUXO_CAIXA,
+  type FluxoCaixaFiltros,
+  type PresetFluxoCaixa,
+} from '../fluxoCaixaFilters'
 import { KPICard } from './KPICard'
 import type { SaidaPorPeriodo, VendaPorPeriodo } from '../types'
 
-function ultimos30DiasParams(): Record<string, string> {
-  const fim = new Date()
-  const inicio = new Date()
-  inicio.setDate(inicio.getDate() - 29)
-  return {
-    filtro: 'periodo',
-    data_inicio: inicio.toISOString(),
-    data_fim: fim.toISOString(),
-  }
-}
-
 export function FluxoCaixaPage() {
+  const [filtros, setFiltros] = useState<FluxoCaixaFiltros>(fluxoCaixaFiltrosIniciais)
   const [vendas, setVendas] = useState<VendaPorPeriodo[]>([])
   const [saidas, setSaidas] = useState<SaidaPorPeriodo[]>([])
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState('')
 
+  const query = useMemo(() => buildFluxoCaixaQuery(filtros), [filtros])
+
   useEffect(() => {
     async function carregar() {
+      if (!query) {
+        setVendas([])
+        setSaidas([])
+        setLoading(false)
+        return
+      }
+
       setLoading(true)
       setErro('')
       try {
-        const params = ultimos30DiasParams()
+        const { params } = query
         const [v, s] = await Promise.all([
-          api.getVendasPeriodo({ ...params, periodo: 'dia' }),
-          api.getSaidasPeriodo({ ...params, periodo: 'dia' }),
+          api.getVendasPeriodo(params),
+          api.getSaidasPeriodo(params),
         ])
         setVendas(v)
         setSaidas(s)
@@ -51,7 +57,7 @@ export function FluxoCaixaPage() {
       }
     }
     carregar()
-  }, [])
+  }, [query])
 
   const { dadosGrafico, totais } = useMemo(() => {
     const mapa = new Map<string, { periodo: string; entradas: number; saidas: number }>()
@@ -94,26 +100,94 @@ export function FluxoCaixaPage() {
     }
   }, [vendas, saidas])
 
+  function setPreset(preset: PresetFluxoCaixa) {
+    setFiltros((atual) => ({ ...atual, preset }))
+  }
+
+  const descricaoPeriodo = query?.descricao ?? 'Selecione o período'
+  const labelAgrupamento = query?.labelAgrupamento ?? 'Período'
+  const aguardandoPersonalizado = filtros.preset === 'personalizado' && !query
+
   return (
     <div>
       <div className="page-header">
         <h1 className="page-title">Fluxo de Caixa</h1>
         <p className="page-subtitle">
-          Entradas (vendas pagas) e saídas dos últimos 30 dias, com saldo acumulado
+          Entradas (vendas pagas) e saídas com saldo acumulado no período escolhido
         </p>
+      </div>
+
+      <div className="dashboard-filtros" style={{ marginBottom: '1.5rem' }}>
+        <div className="dashboard-filtros-top">
+          <div className="dashboard-filtros-title">
+            <Filter size={18} />
+            <span>Período de análise</span>
+          </div>
+          <span className="dashboard-filtros-resumo">{descricaoPeriodo}</span>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={() => setFiltros(fluxoCaixaFiltrosIniciais)}
+          >
+            Restaurar padrão
+          </button>
+        </div>
+
+        <div className="kpi-filtros-periodo">
+          {PRESETS_FLUXO_CAIXA.map(({ id, label }) => (
+            <button
+              key={id}
+              type="button"
+              className={`kpi-filtro-btn ${filtros.preset === id ? 'active' : ''}`}
+              onClick={() => setPreset(id)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {filtros.preset === 'personalizado' && (
+          <div className="kpi-filtros-datas">
+            <input
+              type="date"
+              className="form-input form-input-sm"
+              value={filtros.dataInicio}
+              onChange={(e) =>
+                setFiltros((atual) => ({ ...atual, dataInicio: e.target.value }))
+              }
+            />
+            <span className="kpi-filtro-sep">até</span>
+            <input
+              type="date"
+              className="form-input form-input-sm"
+              value={filtros.dataFim}
+              onChange={(e) =>
+                setFiltros((atual) => ({ ...atual, dataFim: e.target.value }))
+              }
+            />
+          </div>
+        )}
       </div>
 
       {erro && <div className="error-message">{erro}</div>}
 
+      {aguardandoPersonalizado && (
+        <div className="form-card form-card--full form-card--stack">
+          <p style={{ color: 'var(--text-muted)', margin: 0 }}>
+            Informe a data inicial e final para carregar o fluxo de caixa.
+          </p>
+        </div>
+      )}
+
       <div className={`kpi-grid ${loading ? 'kpi-grid-loading' : ''}`}>
         <KPICard
-          label="Entradas (30 dias)"
+          label={`Entradas (${descricaoPeriodo})`}
           value={formatarMoeda(totais.entradas)}
           icon={TrendingUp}
           iconColor="green"
         />
         <KPICard
-          label="Saídas (30 dias)"
+          label={`Saídas (${descricaoPeriodo})`}
           value={formatarMoeda(totais.saidas)}
           icon={TrendingUp}
           iconColor="red"
@@ -127,9 +201,15 @@ export function FluxoCaixaPage() {
       </div>
 
       <div className="chart-card">
-        <h3 className="chart-title">Entradas × Saídas por dia</h3>
+        <h3 className="chart-title">
+          Entradas × Saídas por {labelAgrupamento.toLowerCase()}
+        </h3>
         {loading ? (
           <div className="loading">Carregando gráfico...</div>
+        ) : aguardandoPersonalizado ? (
+          <div className="empty-state">
+            <p>Escolha as datas do período personalizado</p>
+          </div>
         ) : dadosGrafico.length === 0 ? (
           <div className="empty-state">
             <p>Sem movimentação no período</p>
@@ -155,16 +235,16 @@ export function FluxoCaixaPage() {
         )}
       </div>
 
-      {!loading && dadosGrafico.length > 0 && (
+      {!loading && !aguardandoPersonalizado && dadosGrafico.length > 0 && (
         <div className="table-card" style={{ marginTop: '1.5rem' }}>
           <h3 className="chart-title" style={{ padding: '1rem 1rem 0' }}>
-            Saldo acumulado por dia
+            Saldo acumulado por {labelAgrupamento.toLowerCase()}
           </h3>
           <div className="table-wrapper">
             <table>
               <thead>
                 <tr>
-                  <th>Dia</th>
+                  <th>{labelAgrupamento}</th>
                   <th>Entradas</th>
                   <th>Saídas</th>
                   <th>Líquido</th>

@@ -1,16 +1,19 @@
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import desc
-from sqlalchemy.orm import Session
+from sqlalchemy import desc, or_
+from sqlalchemy.orm import Session, joinedload
 
+from contas_pagar_serializers import resolver_documento_beneficiario, serializar_conta_pagar
 from contas_pagar_utils import (
     gerar_conta_pagar_recorrente,
     referencia_mes_de,
     registrar_baixa_conta_pagar,
 )
+from categorias_utils import TIPO_CATEGORIA_SAIDA, assert_categoria_valida
 from database import get_db
-from models import ContaPagar, ContaPagarRecorrente
+from documento_utils import limpar_documento
+from models import ContaPagar, ContaPagarRecorrente, Fornecedor
 from schemas import (
     ContaPagarBaixa,
     ContaPagarCreate,
@@ -50,9 +53,11 @@ def listar_contas_pagar(
     status: str | None = Query(default=None),
     is_dda: bool | None = Query(default=None),
     recorrente_id: int | None = Query(default=None),
+    fornecedor_id: int | None = Query(default=None),
+    documento: str | None = Query(default=None),
     limite: int = Query(default=200, ge=1, le=500),
 ):
-    query = db.query(ContaPagar)
+    query = db.query(ContaPagar).options(joinedload(ContaPagar.fornecedor_cadastro))
 
     if busca:
         termo = f"%{busca}%"
@@ -72,34 +77,67 @@ def listar_contas_pagar(
     if recorrente_id is not None:
         query = query.filter(ContaPagar.recorrente_id == recorrente_id)
 
-    return query.order_by(desc(ContaPagar.data_vencimento)).limit(limite).all()
+    if fornecedor_id is not None:
+        query = query.filter(ContaPagar.fornecedor_id == fornecedor_id)
+
+    if documento:
+        doc = limpar_documento(documento)
+        if doc:
+            query = query.outerjoin(Fornecedor, ContaPagar.fornecedor_id == Fornecedor.id).filter(
+                or_(
+                    ContaPagar.documento_beneficiario.like(f"%{doc}%"),
+                    Fornecedor.documento.like(f"%{doc}%"),
+                )
+            )
+
+    contas = query.order_by(desc(ContaPagar.data_vencimento)).limit(limite).all()
+    return [serializar_conta_pagar(conta) for conta in contas]
 
 
 @router.get("/api/contas-pagar/{conta_id}", response_model=ContaPagarResponse)
 def obter_conta_pagar(conta_id: int, db: Session = Depends(get_db)):
-    conta = db.query(ContaPagar).filter(ContaPagar.id == conta_id).first()
+    conta = (
+        db.query(ContaPagar)
+        .options(joinedload(ContaPagar.fornecedor_cadastro))
+        .filter(ContaPagar.id == conta_id)
+        .first()
+    )
     if not conta:
         raise HTTPException(status_code=404, detail="Conta a pagar não encontrada")
-    return conta
+    return serializar_conta_pagar(conta)
 
 
 @router.post("/api/contas-pagar", response_model=ContaPagarResponse, status_code=201)
 def criar_conta_pagar(dados: ContaPagarCreate, db: Session = Depends(get_db)):
+    categoria = assert_categoria_valida(db, TIPO_CATEGORIA_SAIDA, dados.categoria)
+    documento_benef = resolver_documento_beneficiario(
+        db,
+        dados.fornecedor_id,
+        dados.documento_beneficiario,
+    )
     conta = ContaPagar(
         fornecedor=dados.fornecedor.strip(),
         descricao=dados.descricao.strip(),
-        categoria=dados.categoria,
+        categoria=categoria,
         valor=round(dados.valor, 2),
         data_vencimento=dados.data_vencimento,
         status="pendente",
         is_dda=dados.is_dda,
         linha_digitavel=dados.linha_digitavel,
+        fornecedor_id=dados.fornecedor_id,
+        documento_beneficiario=documento_benef,
         observacao=dados.observacao,
     )
     db.add(conta)
     db.commit()
     db.refresh(conta)
-    return conta
+    conta = (
+        db.query(ContaPagar)
+        .options(joinedload(ContaPagar.fornecedor_cadastro))
+        .filter(ContaPagar.id == conta.id)
+        .first()
+    )
+    return serializar_conta_pagar(conta)
 
 
 @router.put("/api/contas-pagar/{conta_id}", response_model=ContaPagarResponse)
@@ -115,12 +153,29 @@ def atualizar_conta_pagar(
         raise HTTPException(status_code=400, detail="Conta já paga não pode ser editada")
 
     campos = dados.model_dump(exclude_unset=True)
+    if "categoria" in campos and campos["categoria"] is not None:
+        campos["categoria"] = assert_categoria_valida(db, TIPO_CATEGORIA_SAIDA, campos["categoria"])
+    if "fornecedor_id" in campos or "documento_beneficiario" in campos:
+        fornecedor_id = campos.get("fornecedor_id", conta.fornecedor_id)
+        documento_benef = campos.get("documento_beneficiario", conta.documento_beneficiario)
+        campos["documento_beneficiario"] = resolver_documento_beneficiario(
+            db,
+            fornecedor_id,
+            documento_benef,
+        )
+
     for campo, valor in campos.items():
         setattr(conta, campo, valor)
 
     db.commit()
     db.refresh(conta)
-    return conta
+    conta = (
+        db.query(ContaPagar)
+        .options(joinedload(ContaPagar.fornecedor_cadastro))
+        .filter(ContaPagar.id == conta.id)
+        .first()
+    )
+    return serializar_conta_pagar(conta)
 
 
 @router.post("/api/contas-pagar/{conta_id}/baixa", response_model=ContaPagarResponse)
@@ -138,7 +193,13 @@ def baixar_conta_pagar(
     registrar_baixa_conta_pagar(db, conta, dados.forma_pagamento)
     db.commit()
     db.refresh(conta)
-    return conta
+    conta = (
+        db.query(ContaPagar)
+        .options(joinedload(ContaPagar.fornecedor_cadastro))
+        .filter(ContaPagar.id == conta.id)
+        .first()
+    )
+    return serializar_conta_pagar(conta)
 
 
 @router.delete("/api/contas-pagar/{conta_id}", status_code=204)
@@ -180,10 +241,11 @@ def listar_contas_pagar_recorrentes(
     status_code=201,
 )
 def criar_conta_pagar_recorrente(dados: ContaPagarRecorrenteCreate, db: Session = Depends(get_db)):
+    categoria = assert_categoria_valida(db, TIPO_CATEGORIA_SAIDA, dados.categoria)
     recorrente = ContaPagarRecorrente(
         fornecedor=dados.fornecedor.strip(),
         descricao=dados.descricao.strip(),
-        categoria=dados.categoria,
+        categoria=categoria,
         valor=round(dados.valor, 2),
         dia_vencimento=dados.dia_vencimento,
         frequencia=dados.frequencia,
@@ -213,6 +275,8 @@ def atualizar_conta_pagar_recorrente(
         raise HTTPException(status_code=404, detail="Conta recorrente não encontrada")
 
     campos = dados.model_dump(exclude_unset=True)
+    if "categoria" in campos and campos["categoria"] is not None:
+        campos["categoria"] = assert_categoria_valida(db, TIPO_CATEGORIA_SAIDA, campos["categoria"])
     for campo, valor in campos.items():
         setattr(recorrente, campo, valor)
 
@@ -269,7 +333,13 @@ def gerar_conta_de_recorrente(recorrente_id: int, db: Session = Depends(get_db))
 
     db.commit()
     db.refresh(conta)
-    return conta
+    conta = (
+        db.query(ContaPagar)
+        .options(joinedload(ContaPagar.fornecedor_cadastro))
+        .filter(ContaPagar.id == conta.id)
+        .first()
+    )
+    return serializar_conta_pagar(conta)
 
 
 @router.post("/api/contas-pagar-recorrentes/gerar-contas-mes", response_model=GerarContasPagarResultado)
@@ -286,11 +356,20 @@ def gerar_contas_do_mes(db: Session = Depends(get_db)):
             ignoradas += 1
 
     db.commit()
+    contas_serializadas: list[ContaPagarResponse] = []
     for conta in geradas:
         db.refresh(conta)
+        conta_completa = (
+            db.query(ContaPagar)
+            .options(joinedload(ContaPagar.fornecedor_cadastro))
+            .filter(ContaPagar.id == conta.id)
+            .first()
+        )
+        if conta_completa:
+            contas_serializadas.append(serializar_conta_pagar(conta_completa))
 
     return GerarContasPagarResultado(
-        geradas=len(geradas),
+        geradas=len(contas_serializadas),
         ignoradas=ignoradas,
-        contas=geradas,
+        contas=contas_serializadas,
     )

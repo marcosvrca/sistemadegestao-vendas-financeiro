@@ -61,7 +61,7 @@ export function ImportarNFeXml({ onSuccess }: ImportarNFeXmlProps) {
   }
 
   return (
-    <div className="form-card" style={{ marginBottom: '1.5rem' }}>
+    <div className="form-card form-card--full form-card--stack">
       <h3 className="chart-title" style={{ marginBottom: '0.5rem' }}>
         <FileCode2 size={20} style={{ verticalAlign: 'middle', marginRight: 8 }} />
         Importar XML da NF-e

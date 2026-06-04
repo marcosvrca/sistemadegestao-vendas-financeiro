@@ -16,7 +16,6 @@ const formInicial: ContaPagarRecorrenteCreate = {
   dia_vencimento: 10,
   frequencia: 'Mensal',
   ativo: true,
-  is_dda: false,
   observacao: '',
 }
 
@@ -71,7 +70,6 @@ export function ContasPagarRecorrentesPage({ onRefresh }: ContasPagarRecorrentes
       dia_vencimento: item.dia_vencimento,
       frequencia: item.frequencia,
       ativo: item.ativo,
-      is_dda: item.is_dda,
       observacao: item.observacao ?? '',
     })
     setError('')
@@ -172,7 +170,7 @@ export function ContasPagarRecorrentesPage({ onRefresh }: ContasPagarRecorrentes
         </p>
       </div>
 
-      <div className="form-card" style={{ marginBottom: '1.5rem', maxWidth: '100%' }}>
+      <div className="form-card form-card--full form-card--stack">
         <h3 className="chart-title" style={{ marginBottom: '1rem' }}>
           {editando ? `Editar Recorrente #${editando.id}` : 'Nova Conta Recorrente'}
         </h3>
@@ -271,17 +269,6 @@ export function ContasPagarRecorrentesPage({ onRefresh }: ContasPagarRecorrentes
             </div>
 
             <div className="form-group full-width">
-              <label className="import-checkbox">
-                <input
-                  type="checkbox"
-                  checked={form.is_dda}
-                  onChange={(e) => handleChange('is_dda', e.target.checked)}
-                />
-                Débito automático (DDA) — contas geradas entram como DDA em aberto
-              </label>
-            </div>
-
-            <div className="form-group full-width">
               <label className="form-label">Observação (opcional)</label>
               <textarea
                 className="form-textarea"
@@ -345,7 +332,6 @@ export function ContasPagarRecorrentesPage({ onRefresh }: ContasPagarRecorrentes
                   <th>Valor</th>
                   <th>Vencimento</th>
                   <th>Frequência</th>
-                  <th>DDA</th>
                   <th>Status</th>
                   <th>Ações</th>
                 </tr>
@@ -359,7 +345,6 @@ export function ContasPagarRecorrentesPage({ onRefresh }: ContasPagarRecorrentes
                     <td><strong className="text-saida">{formatarMoeda(item.valor)}</strong></td>
                     <td>Dia {item.dia_vencimento}</td>
                     <td><span className="badge">{item.frequencia}</span></td>
-                    <td>{item.is_dda ? 'Sim' : 'Não'}</td>
                     <td>
                       <span className={`badge ${item.ativo ? '' : 'badge-av'}`}>
                         {item.ativo ? 'Ativa' : 'Inativa'}

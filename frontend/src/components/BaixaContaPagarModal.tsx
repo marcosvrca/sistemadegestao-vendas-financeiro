@@ -58,7 +58,6 @@ export function BaixaContaPagarModal({ conta, onClose, onSuccess }: BaixaContaPa
             <p style={{ margin: '0.25rem 0 0', color: 'var(--text-primary)' }}>{conta.descricao}</p>
             <p style={{ margin: '0.25rem 0 0', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
               Vencimento: {formatarDataIso(conta.data_vencimento)}
-              {conta.is_dda && ' · DDA'}
             </p>
           </div>
           <div style={{ textAlign: 'right' }}>

@@ -5,7 +5,7 @@ from datetime import date, datetime
 
 from sqlalchemy.orm import Session
 
-from models import ContaPagar, ContaPagarRecorrente, Saida
+from models import ContaPagar, ContaPagarRecorrente, Fornecedor, Saida
 
 
 def referencia_mes_de(data: date) -> str:
@@ -59,6 +59,11 @@ def gerar_conta_pagar_recorrente(
         return None
 
     vencimento = data_vencimento_no_mes(hoje.year, hoje.month, recorrente.dia_vencimento)
+    documento_benef = None
+    if recorrente.fornecedor_id:
+        fornecedor = db.query(Fornecedor).filter(Fornecedor.id == recorrente.fornecedor_id).first()
+        if fornecedor:
+            documento_benef = fornecedor.documento
     conta = ContaPagar(
         fornecedor=recorrente.fornecedor,
         descricao=recorrente.descricao,
@@ -69,6 +74,8 @@ def gerar_conta_pagar_recorrente(
         is_dda=recorrente.is_dda,
         recorrente_id=recorrente.id,
         referencia_mes=ref,
+        fornecedor_id=recorrente.fornecedor_id,
+        documento_beneficiario=documento_benef,
         observacao=recorrente.observacao,
     )
     db.add(conta)

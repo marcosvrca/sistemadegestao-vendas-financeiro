@@ -124,7 +124,7 @@ export function CaixaPage({ onRefresh }: CaixaPageProps) {
         </p>
       </div>
 
-      <div className="form-card" style={{ marginBottom: '1.5rem', maxWidth: '100%' }}>
+      <div className="form-card form-card--full form-card--stack">
         <div className="form-grid" style={{ alignItems: 'end' }}>
           <div className="form-group">
             <label className="form-label">Data</label>
