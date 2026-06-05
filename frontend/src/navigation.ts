@@ -30,6 +30,10 @@ import {
   StickyNote,
   Wrench,
   Receipt,
+  Banknote,
+  Gift,
+  BadgePercent,
+  ClipboardList,
 } from 'lucide-react'
 
 export type Pagina =
@@ -39,6 +43,8 @@ export type Pagina =
   | 'vendas'
   | 'nova-venda'
   | 'importar-vendas'
+  | 'pedidos'
+  | 'novo-pedido'
   | 'produtos'
   | 'estoque-resumo'
   | 'estoque-movimentacoes'
@@ -67,6 +73,13 @@ export type Pagina =
   | 'recursos-calendario'
   | 'recursos-agenda'
   | 'recursos-notas'
+  | 'recursos-cedulas'
+  | 'recursos-configuracoes'
+  | 'recursos-atalhos-teclado'
+  | 'recursos-aparencia'
+  | 'recursos-alterar-dashboard'
+  | 'recursos-sorteador'
+  | 'recursos-promocoes'
 
 export interface NavSubItem {
   id: Pagina
@@ -106,6 +119,14 @@ export const NAV_SECOES: NavSection[] = [
       { id: 'vendas', label: 'Lista de Vendas', icon: ShoppingCart },
       { id: 'nova-venda', label: 'Nova Venda', icon: PlusCircle },
       { id: 'importar-vendas', label: 'Importar Planilha', icon: FileSpreadsheet },
+    ],
+  },
+  {
+    id: 'pedidos',
+    label: 'Pedidos',
+    items: [
+      { id: 'pedidos', label: 'Visão Geral', icon: ClipboardList },
+      { id: 'novo-pedido', label: 'Novo Pedido', icon: PlusCircle },
     ],
   },
   {
@@ -191,6 +212,10 @@ export const NAV_SECOES: NavSection[] = [
       { id: 'recursos-calendario', label: 'Calendário', icon: Calendar },
       { id: 'recursos-agenda', label: 'Agenda', icon: CalendarDays },
       { id: 'recursos-notas', label: 'Anotações', icon: StickyNote },
+      { id: 'recursos-cedulas', label: 'Registrar Cédulas', icon: Banknote },
+      { id: 'recursos-sorteador', label: 'Sorteador', icon: Gift },
+      { id: 'recursos-promocoes', label: 'Promoções', icon: BadgePercent },
+      { id: 'recursos-configuracoes', label: 'Configurações', icon: Settings },
     ],
   },
 ]
@@ -202,6 +227,8 @@ export const PAGINA_TITULOS: Record<Pagina, string> = {
   vendas: 'Vendas',
   'nova-venda': 'Nova Venda',
   'importar-vendas': 'Importar Vendas',
+  pedidos: 'Pedidos — Visão Geral',
+  'novo-pedido': 'Novo Pedido',
   produtos: 'Catálogo de Produtos',
   'estoque-resumo': 'Visão do Estoque',
   'estoque-movimentacoes': 'Movimentações de Estoque',
@@ -230,6 +257,13 @@ export const PAGINA_TITULOS: Record<Pagina, string> = {
   'recursos-calendario': 'Calendário',
   'recursos-agenda': 'Agenda',
   'recursos-notas': 'Anotações',
+  'recursos-cedulas': 'Registrar Cédulas',
+  'recursos-configuracoes': 'Configurações',
+  'recursos-atalhos-teclado': 'Atalhos do teclado',
+  'recursos-aparencia': 'Aparência do sistema',
+  'recursos-alterar-dashboard': 'Alterar Dashboard',
+  'recursos-sorteador': 'Sorteador',
+  'recursos-promocoes': 'Promoções',
 }
 
 export const PAGINA_SUBTITULOS: Partial<Record<Pagina, string>> = {
@@ -239,6 +273,8 @@ export const PAGINA_SUBTITULOS: Partial<Record<Pagina, string>> = {
   vendas: 'Histórico e gestão de vendas',
   'nova-venda': 'Registre uma nova venda',
   'importar-vendas': 'Importe vendas a partir de planilha Excel',
+  pedidos: 'Acompanhe pedidos pendentes, em andamento e finalizados',
+  'novo-pedido': 'Registre um novo pedido com tipo, valor e data prevista',
   produtos: 'Cadastro, preços e níveis de estoque',
   'estoque-resumo': 'Indicadores e alertas de estoque',
   'estoque-movimentacoes': 'Entradas, saídas e histórico',
@@ -267,6 +303,13 @@ export const PAGINA_SUBTITULOS: Partial<Record<Pagina, string>> = {
   'recursos-calendario': 'Visualize o calendário mensal e eventos marcados',
   'recursos-agenda': 'Organize compromissos e lembretes',
   'recursos-notas': 'Bloco de notas para anotações rápidas',
+  'recursos-cedulas': 'Contagem de cédulas e moedas com total automático',
+  'recursos-configuracoes': 'Preferências e ajustes dos Recursos',
+  'recursos-atalhos-teclado': 'Atalhos personalizados para abrir telas do sistema',
+  'recursos-aparencia': 'Cores de destaque, logo e nome exibidos no sistema',
+  'recursos-alterar-dashboard': 'Exibir ou ocultar blocos já existentes no Dashboard',
+  'recursos-sorteador': 'Sorteios para clientes — cadastro de participantes e sorteio',
+  'recursos-promocoes': 'Campanhas de desconto, brindes e descontos progressivos',
 }
 
 export interface EmBreveConfig {

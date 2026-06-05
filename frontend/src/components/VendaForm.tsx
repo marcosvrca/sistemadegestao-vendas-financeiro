@@ -1,5 +1,5 @@
-import { useEffect, useState, FormEvent } from 'react'
-import { Save, Plus, Trash2, CheckCircle2, RotateCcw } from 'lucide-react'
+import { useEffect, useMemo, useState, FormEvent } from 'react'
+import { Save, Plus, Trash2, CheckCircle2, RotateCcw, BadgePercent } from 'lucide-react'
 import { api } from '../api'
 import {
   calcularValorTotal,
@@ -14,6 +14,12 @@ import {
   produtoCatalogoDoItem,
   resolverNomeProduto,
 } from '../produtoEstoqueHelpers'
+import {
+  PROMOCOES_ALTERADAS_EVENT,
+  carregarPromocoes,
+  listarPromocoesAtivasNaData,
+  type Promocao,
+} from '../promocoesStorage'
 
 interface VendaFormProps {
   onSuccess?: () => void
@@ -63,11 +69,37 @@ export function VendaForm({ onSuccess }: VendaFormProps) {
   const [valorRecebido, setValorRecebido] = useState<number | ''>('')
   const [parcelas, setParcelas] = useState(1)
   const [opcoesProduto, setOpcoesProduto] = useState<ProdutoOpcao[]>([])
+  const [promocoes, setPromocoes] = useState<Promocao[]>(() => carregarPromocoes())
+  const [promocaoVinculadaId, setPromocaoVinculadaId] = useState<string | null>(null)
 
   useEffect(() => {
     api.getFormasPagamentoVenda().then(setFormas)
     api.getProdutoOpcoes().then(setOpcoesProduto)
   }, [])
+
+  useEffect(() => {
+    function syncPromocoes() {
+      setPromocoes(carregarPromocoes())
+    }
+    window.addEventListener(PROMOCOES_ALTERADAS_EVENT, syncPromocoes)
+    return () => window.removeEventListener(PROMOCOES_ALTERADAS_EVENT, syncPromocoes)
+  }, [])
+
+  const promocoesAtivas = useMemo(
+    () => listarPromocoesAtivasNaData(cabecalho.data, promocoes),
+    [cabecalho.data, promocoes]
+  )
+
+  const promocaoVinculada = useMemo(
+    () => promocoesAtivas.find((p) => p.id === promocaoVinculadaId) ?? null,
+    [promocoesAtivas, promocaoVinculadaId]
+  )
+
+  useEffect(() => {
+    if (promocaoVinculadaId && !promocoesAtivas.some((p) => p.id === promocaoVinculadaId)) {
+      setPromocaoVinculadaId(null)
+    }
+  }, [promocoesAtivas, promocaoVinculadaId])
 
   const valorTotal = itens.reduce(
     (acc, item) => acc + calcularValorTotal(item.quantidade, item.valor_unitario, item.desconto),
@@ -162,7 +194,18 @@ export function VendaForm({ onSuccess }: VendaFormProps) {
     setHouveTroco(false)
     setValorRecebido('')
     setParcelas(1)
+    setPromocaoVinculadaId(null)
     setError('')
+  }
+
+  function vincularPromocao(id: string) {
+    setPromocaoVinculadaId(id)
+    setSucesso(false)
+  }
+
+  function desvincularPromocao() {
+    setPromocaoVinculadaId(null)
+    setSucesso(false)
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -203,6 +246,8 @@ export function VendaForm({ onSuccess }: VendaFormProps) {
       cliente: cabecalho.cliente,
       forma_pagamento: cabecalho.forma_pagamento,
       observacao: cabecalho.observacao || undefined,
+      promocao_id: promocaoVinculada?.id,
+      promocao_nome: promocaoVinculada?.nome,
       valor_recebido: houveTroco && isDinheiro ? valorRecebidoNum : undefined,
       troco: houveTroco && isDinheiro ? trocoCalculado : undefined,
       parcelas: isCredito ? parcelas : undefined,
@@ -248,6 +293,48 @@ export function VendaForm({ onSuccess }: VendaFormProps) {
       </header>
 
       {error && <div className="error-message venda-compact-msg">{error}</div>}
+
+      {promocoesAtivas.length > 0 && (
+        <div className="venda-promo-avisos" role="region" aria-label="Promoções ativas">
+          {promocoesAtivas.map((promo) => {
+            const vinculada = promocaoVinculadaId === promo.id
+            return (
+              <div
+                key={promo.id}
+                className={`venda-promo-aviso ${vinculada ? 'venda-promo-aviso--vinculada' : ''}`}
+              >
+                <BadgePercent size={18} aria-hidden />
+                <p className="venda-promo-aviso-texto">
+                  Promoção <strong>{promo.nome}</strong> ativa. Vincular à venda?
+                </p>
+                <div className="venda-promo-aviso-acoes">
+                  <button
+                    type="button"
+                    className={`btn btn-sm ${vinculada ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={() => vincularPromocao(promo.id)}
+                  >
+                    Sim
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => (vinculada ? desvincularPromocao() : undefined)}
+                    disabled={!vinculada}
+                  >
+                    Não
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+          {promocaoVinculada && (
+            <p className="venda-promo-vinculada-hint">
+              Esta venda será registrada vinculada à promoção <strong>{promocaoVinculada.nome}</strong>{' '}
+              (sem alterar valores).
+            </p>
+          )}
+        </div>
+      )}
 
       <form className="venda-compact-card" onSubmit={handleSubmit}>
         <div className="venda-compact-row venda-compact-row--3">

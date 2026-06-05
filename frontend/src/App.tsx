@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 
 import { Sidebar } from './components/Sidebar'
 
@@ -7,6 +7,8 @@ import { AppHeader } from './components/AppHeader'
 import { PageRouter } from './components/PageRouter'
 
 import type { Pagina } from './navigation'
+
+import { useAtalhosTecladoGlobal } from './useAtalhosTecladoGlobal'
 
 
 
@@ -28,13 +30,12 @@ export default function App() {
 
 
 
-  function navegar(p: Pagina) {
-
+  const navegar = useCallback((p: Pagina) => {
     setPagina(p)
-
     setMenuAberto(false)
+  }, [])
 
-  }
+  useAtalhosTecladoGlobal(navegar)
 
 
 

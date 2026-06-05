@@ -68,6 +68,10 @@ def migrar_banco() -> None:
                         "WHERE forma_pagamento != 'AV' AND pago_em IS NULL"
                     )
                 )
+            if "promocao_id" not in colunas_vendas:
+                conn.execute(text("ALTER TABLE vendas ADD COLUMN promocao_id VARCHAR(64)"))
+            if "promocao_nome" not in colunas_vendas:
+                conn.execute(text("ALTER TABLE vendas ADD COLUMN promocao_nome VARCHAR(200)"))
 
         colunas_contas = {
             row[1] for row in conn.execute(text("PRAGMA table_info(contas_pagar)")).fetchall()

@@ -61,6 +61,7 @@ from contas_pagar_api import router as contas_pagar_router
 from fornecedores_api import router as fornecedores_router
 from clientes_api import router as clientes_router
 from categorias_api import router as categorias_router
+from pedidos_api import router as pedidos_router
 from estoque_utils import (
     aplicar_itens_venda_estoque,
     estornar_itens_venda_estoque,
@@ -77,6 +78,7 @@ app.include_router(contas_pagar_router)
 app.include_router(fornecedores_router)
 app.include_router(clientes_router)
 app.include_router(categorias_router)
+app.include_router(pedidos_router)
 
 app.add_middleware(
     CORSMiddleware,
@@ -347,6 +349,8 @@ def criar_venda(venda: VendaCreate, db: Session = Depends(get_db)):
         valor_recebido=venda.valor_recebido,
         parcelas=venda.parcelas,
         observacao=venda.observacao,
+        promocao_id=venda.promocao_id,
+        promocao_nome=venda.promocao_nome,
     )
     db.add(nova_venda)
     db.flush()

@@ -36,6 +36,12 @@ import { DashboardFiltros } from './DashboardFiltros'
 import { VendasAVAlerta } from './VendasAVAlerta'
 import { useTheme } from '../theme/ThemeContext'
 import { chartTooltipStyle, getChartTheme } from '../theme/chartTheme'
+import {
+  DASHBOARD_LAYOUT_ALTERADO_EVENT,
+  carregarDashboardLayout,
+  widgetDashboardVisivel,
+  type DashboardLayoutConfig,
+} from '../dashboardLayoutStorage'
 
 function ChartVazio({ altura = 280 }: { altura?: number }) {
   return (
@@ -66,6 +72,18 @@ export function Dashboard() {
   const [vendasAV, setVendasAV] = useState<VendasAVPendentes>(vendasAVVazias)
   const [loading, setLoading] = useState(true)
   const [erroConexao, setErroConexao] = useState<string | null>(null)
+  const [layout, setLayout] = useState<DashboardLayoutConfig>(() => carregarDashboardLayout())
+
+  const visivel = (id: Parameters<typeof widgetDashboardVisivel>[1]) =>
+    widgetDashboardVisivel(layout, id)
+
+  useEffect(() => {
+    function sync() {
+      setLayout(carregarDashboardLayout())
+    }
+    window.addEventListener(DASHBOARD_LAYOUT_ALTERADO_EVENT, sync)
+    return () => window.removeEventListener(DASHBOARD_LAYOUT_ALTERADO_EVENT, sync)
+  }, [])
 
   const params = useMemo(() => buildDashboardParams(filtros), [filtros])
 
@@ -168,9 +186,12 @@ export function Dashboard() {
         descricaoPeriodo={kpis.descricao_periodo}
       />
 
-      {vendasAV.quantidade > 0 && <VendasAVAlerta dados={vendasAV} />}
+      {visivel('alerta_vendas_av') && vendasAV.quantidade > 0 && (
+        <VendasAVAlerta dados={vendasAV} />
+      )}
 
       <div className={`kpi-grid ${loading ? 'kpi-grid-loading' : ''}`}>
+        {visivel('kpi_faturamento') && (
         <KPICard
           label="Faturamento"
           value={formatarMoeda(kpis.total_vendas)}
@@ -178,48 +199,64 @@ export function Dashboard() {
           iconColor="gold"
           subtitle="Somente vendas pagas (AV pendente não entra)"
         />
+        )}
+        {visivel('kpi_ticket_medio') && (
         <KPICard
           label="Média de Venda"
           value={formatarMoeda(kpis.ticket_medio)}
           icon={Receipt}
           iconColor="purple"
         />
+        )}
+        {visivel('kpi_quantidade_vendas') && (
         <KPICard
           label="Quantidade de Vendas"
           value={kpis.quantidade_vendas.toString()}
           icon={ShoppingBag}
           iconColor="green"
         />
+        )}
+        {visivel('kpi_itens_vendidos') && (
         <KPICard
           label="Itens Vendidos"
           value={kpis.total_itens.toString()}
           icon={Package}
           iconColor="blue"
         />
+        )}
+        {visivel('kpi_descontos') && (
         <KPICard
           label="Descontos"
           value={formatarMoeda(kpis.total_descontos)}
           icon={Tag}
           iconColor="red"
         />
+        )}
+        {visivel('kpi_total_saidas') && (
         <KPICard
           label="Total de Saídas"
           value={formatarMoeda(kpis.total_saidas)}
           icon={ArrowDownCircle}
           iconColor="red"
         />
+        )}
+        {visivel('kpi_quantidade_saidas') && (
         <KPICard
           label="Quantidade de Saídas"
           value={kpis.quantidade_saidas.toString()}
           icon={ArrowDownCircle}
           iconColor="red"
         />
+        )}
+        {visivel('kpi_saldo') && (
         <KPICard
           label="Saldo"
           value={formatarMoeda(kpis.saldo)}
           icon={Wallet}
           iconColor={kpis.saldo >= 0 ? 'green' : 'red'}
         />
+        )}
+        {visivel('kpi_melhor_dia') && (
         <KPICard
           label="Melhor Dia de Vendas"
           value={kpis.melhor_dia ? formatarDataIso(kpis.melhor_dia) : '—'}
@@ -231,7 +268,8 @@ export function Dashboard() {
           icon={Trophy}
           iconColor="gold"
         />
-        {vendasAV.quantidade > 0 && (
+        )}
+        {visivel('kpi_av_pendentes') && vendasAV.quantidade > 0 && (
           <KPICard
             label="AV Pendentes"
             value={vendasAV.quantidade.toString()}
@@ -243,6 +281,7 @@ export function Dashboard() {
       </div>
 
       <div className="charts-grid">
+        {visivel('chart_evolucao_vendas') && (
         <div className="chart-card full-width">
           <h3 className="chart-title">Evolução de Vendas</h3>
           {dadosPeriodo.length === 0 ? (
@@ -274,7 +313,9 @@ export function Dashboard() {
             </ResponsiveContainer>
           )}
         </div>
+        )}
 
+        {visivel('chart_evolucao_saidas') && (
         <div className="chart-card full-width">
           <h3 className="chart-title">Evolução de Saídas</h3>
           {dadosSaidasPeriodo.length === 0 ? (
@@ -306,7 +347,9 @@ export function Dashboard() {
             </ResponsiveContainer>
           )}
         </div>
+        )}
 
+        {visivel('chart_saidas_categoria') && (
         <div className="chart-card">
           <h3 className="chart-title">Saídas por Categoria</h3>
           {dadosSaidasCategoria.length === 0 ? (
@@ -336,7 +379,9 @@ export function Dashboard() {
             </ResponsiveContainer>
           )}
         </div>
+        )}
 
+        {visivel('chart_formas_pagamento') && (
         <div className="chart-card">
           <h3 className="chart-title">Vendas por Forma de Pagamento</h3>
           {dadosPagamento.length === 0 ? (
@@ -366,7 +411,9 @@ export function Dashboard() {
             </ResponsiveContainer>
           )}
         </div>
+        )}
 
+        {visivel('chart_vendas_dia') && (
         <div className="chart-card">
           <h3 className="chart-title">Vendas por Dia</h3>
           {vendasMes.length === 0 ? (
@@ -387,7 +434,9 @@ export function Dashboard() {
             </ResponsiveContainer>
           )}
         </div>
+        )}
 
+        {visivel('chart_top_produtos') && (
         <div className="chart-card">
           <h3 className="chart-title">Top 5 Produtos</h3>
           {topProdutos.length === 0 ? (
@@ -413,7 +462,9 @@ export function Dashboard() {
             </ResponsiveContainer>
           )}
         </div>
+        )}
 
+        {visivel('chart_top_clientes') && (
         <div className="chart-card">
           <h3 className="chart-title">Top 5 Clientes</h3>
           {topClientes.length === 0 ? (
@@ -439,6 +490,7 @@ export function Dashboard() {
             </ResponsiveContainer>
           )}
         </div>
+        )}
       </div>
     </div>
   )

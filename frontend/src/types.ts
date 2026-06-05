@@ -22,6 +22,8 @@ export interface Venda {
   parcelas?: number | null
   pago_em?: string | null
   observacao?: string | null
+  promocao_id?: string | null
+  promocao_nome?: string | null
   itens?: ItemVenda[]
 }
 
@@ -33,6 +35,8 @@ export interface VendaCreate {
   valor_recebido?: number
   parcelas?: number
   observacao?: string
+  promocao_id?: string
+  promocao_nome?: string
   itens: ItemVenda[]
   produto?: string
   quantidade?: number
@@ -443,6 +447,40 @@ export interface GerarContasPagarResultado {
   geradas: number
   ignoradas: number
   contas: ContaPagar[]
+}
+
+export type StatusPedido = 'pendente' | 'em_andamento' | 'finalizado' | 'cancelado'
+
+export interface Pedido {
+  id: number
+  dados: string
+  tipo: string
+  valor: number
+  data_prevista: string
+  status: StatusPedido
+  observacao?: string | null
+  criado_em: string
+  atualizado_em: string
+  finalizado_em?: string | null
+}
+
+export interface PedidoCreate {
+  dados: string
+  tipo: string
+  valor: number
+  data_prevista: string
+  observacao?: string
+}
+
+export interface PedidosResumo {
+  quantidade_pendente: number
+  total_pendente: number
+  quantidade_em_andamento: number
+  total_em_andamento: number
+  quantidade_finalizado: number
+  total_finalizado: number
+  quantidade_atrasados: number
+  total_atrasados: number
 }
 
 export interface DiaVendasResumo {

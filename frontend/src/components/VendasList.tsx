@@ -331,6 +331,11 @@ export function VendasList({ onRefresh }: VendasListProps) {
                           ? `${venda.forma_pagamento} · ${venda.parcelas}x`
                           : venda.forma_pagamento}
                     </span>
+                    {venda.promocao_nome && (
+                      <span className="badge badge-promo" title="Venda vinculada à promoção">
+                        Promo: {venda.promocao_nome}
+                      </span>
+                    )}
                   </div>
 
                   <p className="venda-lista-produto">

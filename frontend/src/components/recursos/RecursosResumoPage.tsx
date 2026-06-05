@@ -1,4 +1,4 @@
-import { Calculator, Percent, Calendar, CalendarDays, StickyNote } from 'lucide-react'
+import { Calculator, Percent, Calendar, CalendarDays, StickyNote, Banknote, Gift, BadgePercent } from 'lucide-react'
 import { PageShell } from '../PageShell'
 import type { Pagina } from '../../navigation'
 
@@ -36,6 +36,24 @@ const atalhos: { pagina: Pagina; label: string; desc: string; icon: typeof Calcu
     label: 'Anotações',
     desc: 'Bloco de notas rápido',
     icon: StickyNote,
+  },
+  {
+    pagina: 'recursos-cedulas',
+    label: 'Registrar Cédulas',
+    desc: 'Contagem de cédulas e moedas',
+    icon: Banknote,
+  },
+  {
+    pagina: 'recursos-sorteador',
+    label: 'Sorteador',
+    desc: 'Sorteios para clientes da loja',
+    icon: Gift,
+  },
+  {
+    pagina: 'recursos-promocoes',
+    label: 'Promoções',
+    desc: 'Descontos, brindes e campanhas',
+    icon: BadgePercent,
   },
 ]
 

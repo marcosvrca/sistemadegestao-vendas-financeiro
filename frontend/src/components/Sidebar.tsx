@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { ChevronDown, Cross, X } from 'lucide-react'
+import { ChevronDown, X } from 'lucide-react'
 import type { NavItem, Pagina } from '../navigation'
 import { NAV_SECOES, grupoIdDaPagina, itemContemPagina, secaoIdDaPagina } from '../navigation'
 import { ThemeToggle } from './ThemeToggle'
+import { AppBrand } from './AppBrand'
 
 interface SidebarProps {
   paginaAtual: Pagina
@@ -143,13 +144,7 @@ export function Sidebar({ paginaAtual, onNavigate, aberto, onFechar }: SidebarPr
     <aside className={`sidebar ${aberto ? 'sidebar-open' : ''}`}>
       <div className="sidebar-header">
         <div className="sidebar-brand">
-          <div className="sidebar-logo-icon">
-            <Cross size={22} />
-          </div>
-          <div>
-            <div className="sidebar-logo">Recanto da Fé</div>
-            <div className="sidebar-subtitle">Gestão Comercial</div>
-          </div>
+          <AppBrand />
         </div>
         <button
           type="button"

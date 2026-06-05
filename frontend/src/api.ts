@@ -46,6 +46,9 @@ import type {
   ClienteCreate,
   Categoria,
   CategoriaCreate,
+  Pedido,
+  PedidoCreate,
+  PedidosResumo,
 } from './types'
 
 const API = '/api'
@@ -446,4 +449,30 @@ export const api = {
 
   deleteCategoria: (id: number) =>
     fetchJson<void>(`${API}/categorias/${id}`, { method: 'DELETE' }),
+
+  getPedidosResumo: () =>
+    fetchJson<PedidosResumo>(`${API}/pedidos/resumo`),
+
+  getPedidos: (params?: Record<string, string>) =>
+    fetchJson<Pedido[]>(`${API}/pedidos${queryString(params)}`),
+
+  createPedido: (dados: PedidoCreate) =>
+    fetchJson<Pedido>(`${API}/pedidos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dados),
+    }),
+
+  updatePedido: (id: number, dados: Partial<PedidoCreate & { status: string }>) =>
+    fetchJson<Pedido>(`${API}/pedidos/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dados),
+    }),
+
+  finalizarPedido: (id: number) =>
+    fetchJson<Pedido>(`${API}/pedidos/${id}/finalizar`, { method: 'POST' }),
+
+  deletePedido: (id: number) =>
+    fetchJson<void>(`${API}/pedidos/${id}`, { method: 'DELETE' }),
 }

@@ -29,7 +29,16 @@ import { CalculadoraPorcentagemPage } from './recursos/CalculadoraPorcentagemPag
 import { CalendarioPage } from './recursos/CalendarioPage'
 import { AgendaPage } from './recursos/AgendaPage'
 import { NotasPage } from './recursos/NotasPage'
+import { CedulasPage } from './recursos/CedulasPage'
+import { RecursosConfigPage } from './recursos/RecursosConfigPage'
+import { AtalhosTecladoPage } from './recursos/AtalhosTecladoPage'
+import { RecursosAparenciaPage } from './recursos/RecursosAparenciaPage'
+import { AlterarDashboardPage } from './recursos/AlterarDashboardPage'
+import { SorteadorPage } from './recursos/SorteadorPage'
+import { PromocoesPage } from './recursos/PromocoesPage'
 import { AlertasPage } from './AlertasPage'
+import { PedidosPage } from './PedidosPage'
+import { NovoPedidoPage } from './NovoPedidoPage'
 import type { Pagina } from '../navigation'
 import { isPaginaEmBreve, paginaParaSecaoEstoque } from '../navigation'
 
@@ -60,6 +69,16 @@ export function PageRouter({ pagina, refreshKey, onRefresh, onNavigate }: PageRo
       return <VendaForm onSuccess={onRefresh} />
     case 'importar-vendas':
       return <ImportExcel onSuccess={onRefresh} />
+    case 'pedidos':
+      return (
+        <PedidosPage
+          key={refreshKey}
+          onRefresh={onRefresh}
+          onNavigate={onNavigate}
+        />
+      )
+    case 'novo-pedido':
+      return <NovoPedidoPage key={refreshKey} onRefresh={onRefresh} />
     case 'estoque-resumo':
       return <EstoqueResumoPage onNavigate={onNavigate} />
     case 'estoque-configuracoes':
@@ -114,6 +133,20 @@ export function PageRouter({ pagina, refreshKey, onRefresh, onNavigate }: PageRo
       return <AgendaPage />
     case 'recursos-notas':
       return <NotasPage />
+    case 'recursos-cedulas':
+      return <CedulasPage />
+    case 'recursos-sorteador':
+      return <SorteadorPage />
+    case 'recursos-promocoes':
+      return <PromocoesPage />
+    case 'recursos-configuracoes':
+      return <RecursosConfigPage onNavigate={onNavigate} />
+    case 'recursos-atalhos-teclado':
+      return <AtalhosTecladoPage onNavigate={onNavigate} />
+    case 'recursos-aparencia':
+      return <RecursosAparenciaPage onNavigate={onNavigate} />
+    case 'recursos-alterar-dashboard':
+      return <AlterarDashboardPage onNavigate={onNavigate} />
     default:
       if (secaoEstoque) {
         return (

@@ -52,6 +52,8 @@ class VendaBase(BaseModel):
     valor_recebido: float | None = Field(default=None, ge=0)
     parcelas: int | None = Field(default=None, ge=1, le=24)
     observacao: str | None = Field(default=None, max_length=500)
+    promocao_id: str | None = Field(default=None, max_length=64)
+    promocao_nome: str | None = Field(default=None, max_length=200)
 
     @field_validator("forma_pagamento")
     @classmethod
@@ -99,6 +101,8 @@ class VendaUpdate(BaseModel):
     valor_recebido: float | None = Field(default=None, ge=0)
     parcelas: int | None = Field(default=None, ge=1, le=24)
     observacao: str | None = Field(default=None, max_length=500)
+    promocao_id: str | None = Field(default=None, max_length=64)
+    promocao_nome: str | None = Field(default=None, max_length=200)
     itens: list[ItemVendaUpdate] | None = None
     produto: str | None = Field(default=None, min_length=1, max_length=200)
     quantidade: int | None = Field(default=None, ge=1)
@@ -844,3 +848,60 @@ class GerarContasPagarResultado(BaseModel):
     geradas: int
     ignoradas: int
     contas: list[ContaPagarResponse]
+
+
+STATUS_PEDIDO = ("pendente", "em_andamento", "finalizado", "cancelado")
+
+
+class PedidoBase(BaseModel):
+    dados: str = Field(..., min_length=1, max_length=500)
+    tipo: str = Field(..., min_length=1, max_length=100)
+    valor: float = Field(..., gt=0)
+    data_prevista: date
+    observacao: str | None = Field(default=None, max_length=500)
+
+    @field_validator("tipo")
+    @classmethod
+    def validar_tipo(cls, v: str) -> str:
+        return v.strip()
+
+
+class PedidoCreate(PedidoBase):
+    pass
+
+
+class PedidoUpdate(BaseModel):
+    dados: str | None = Field(default=None, min_length=1, max_length=500)
+    tipo: str | None = Field(default=None, min_length=1, max_length=100)
+    valor: float | None = Field(default=None, gt=0)
+    data_prevista: date | None = None
+    status: str | None = None
+    observacao: str | None = Field(default=None, max_length=500)
+
+    @field_validator("status")
+    @classmethod
+    def validar_status(cls, v: str | None) -> str | None:
+        if v is not None and v not in STATUS_PEDIDO:
+            raise ValueError(f"Status inválido. Use: {', '.join(STATUS_PEDIDO)}")
+        return v
+
+
+class PedidoResponse(PedidoBase):
+    id: int
+    status: str
+    criado_em: datetime
+    atualizado_em: datetime
+    finalizado_em: datetime | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class PedidosResumo(BaseModel):
+    quantidade_pendente: int
+    total_pendente: float
+    quantidade_em_andamento: int
+    total_em_andamento: float
+    quantidade_finalizado: int
+    total_finalizado: float
+    quantidade_atrasados: int
+    total_atrasados: float

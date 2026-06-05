@@ -23,6 +23,8 @@ class Venda(Base):
     parcelas: Mapped[int | None] = mapped_column(Integer, nullable=True)
     pago_em: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
     observacao: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    promocao_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    promocao_nome: Mapped[str | None] = mapped_column(String(200), nullable=True)
 
     itens: Mapped[list["ItemVenda"]] = relationship(
         back_populates="venda",
@@ -298,3 +300,20 @@ class ContaPagar(Base):
 
     recorrente: Mapped["ContaPagarRecorrente | None"] = relationship(back_populates="contas")
     fornecedor_cadastro: Mapped["Fornecedor | None"] = relationship(back_populates="contas")
+
+
+class Pedido(Base):
+    __tablename__ = "pedidos"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    dados: Mapped[str] = mapped_column(String(500))
+    tipo: Mapped[str] = mapped_column(String(100), index=True)
+    valor: Mapped[float] = mapped_column(Float)
+    data_prevista: Mapped[date] = mapped_column(Date, index=True)
+    status: Mapped[str] = mapped_column(String(20), default="pendente", index=True)
+    observacao: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, index=True)
+    atualizado_em: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.now, onupdate=datetime.now
+    )
+    finalizado_em: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
