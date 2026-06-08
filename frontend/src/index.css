@@ -2204,6 +2204,45 @@ td.actions {
   color: var(--text-muted);
 }
 
+.pagamentos-divididos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.pagamento-dividido-row {
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+}
+
+.pagamento-dividido-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.65rem;
+}
+
+.pagamento-dividido-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+}
+
+.pagamento-dividido-troco {
+  margin-top: 0.65rem;
+}
+
+.pagamentos-divididos-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  font-size: 0.875rem;
+}
+
 .venda-compact-itens-head {
   display: flex;
   align-items: center;

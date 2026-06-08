@@ -5,10 +5,16 @@ import {
   calcularValorTotal,
   datetimeLocalParaApi,
   formatarMoeda,
-  FORMA_CARTAO_CREDITO,
   toDatetimeLocal,
 } from '../utils'
 import type { ItemVenda, ProdutoOpcao, VendaCreate } from '../types'
+import {
+  criarPagamentoVazio,
+  montarDadosPagamentoVenda,
+  validarPagamentos,
+  type PagamentoForm,
+} from '../pagamentosVendaHelpers'
+import { PagamentosVendaSection } from './PagamentosVendaSection'
 import {
   PRODUTO_OUTRO_VALUE,
   produtoCatalogoDoItem,
@@ -33,12 +39,6 @@ interface ItemForm extends ItemVenda {
 
 const CLIENTES_RAPIDOS = ['Cliente avulso', 'Congregação', 'Visitante']
 
-const PAGAMENTO_CURTO: Record<string, string> = {
-  'Cartão Débito': 'Débito',
-  'Cartão Crédito': 'Crédito',
-  AV: 'AV',
-}
-
 function criarItemVazio(): ItemForm {
   return {
     key: crypto.randomUUID(),
@@ -54,7 +54,6 @@ function criarItemVazio(): ItemForm {
 const cabecalhoInicial = {
   data: toDatetimeLocal(),
   cliente: 'Cliente avulso',
-  forma_pagamento: 'Dinheiro',
   observacao: '',
 }
 
@@ -65,9 +64,8 @@ export function VendaForm({ onSuccess }: VendaFormProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [sucesso, setSucesso] = useState(false)
-  const [houveTroco, setHouveTroco] = useState(false)
-  const [valorRecebido, setValorRecebido] = useState<number | ''>('')
-  const [parcelas, setParcelas] = useState(1)
+  const [dividirPagamento, setDividirPagamento] = useState(false)
+  const [pagamentos, setPagamentos] = useState<PagamentoForm[]>([criarPagamentoVazio()])
   const [opcoesProduto, setOpcoesProduto] = useState<ProdutoOpcao[]>([])
   const [promocoes, setPromocoes] = useState<Promocao[]>(() => carregarPromocoes())
   const [promocaoVinculadaId, setPromocaoVinculadaId] = useState<string | null>(null)
@@ -105,28 +103,8 @@ export function VendaForm({ onSuccess }: VendaFormProps) {
     (acc, item) => acc + calcularValorTotal(item.quantidade, item.valor_unitario, item.desconto),
     0,
   )
-  const isDinheiro = cabecalho.forma_pagamento === 'Dinheiro'
-  const isAV = cabecalho.forma_pagamento === 'AV'
-  const isCredito = cabecalho.forma_pagamento === FORMA_CARTAO_CREDITO
-  const valorParcela = isCredito && parcelas > 0 ? valorTotal / parcelas : 0
-  const valorRecebidoNum = typeof valorRecebido === 'number' ? valorRecebido : 0
-  const trocoCalculado =
-    houveTroco && valorRecebidoNum > 0 ? Math.max(valorRecebidoNum - valorTotal, 0) : 0
-
   function handleCabecalho(field: keyof typeof cabecalhoInicial, value: string) {
-    setCabecalho((prev) => {
-      const next = { ...prev, [field]: value }
-      if (field === 'forma_pagamento') {
-        if (value !== 'Dinheiro') {
-          setHouveTroco(false)
-          setValorRecebido('')
-        }
-        if (value !== FORMA_CARTAO_CREDITO) {
-          setParcelas(1)
-        }
-      }
-      return next
-    })
+    setCabecalho((prev) => ({ ...prev, [field]: value }))
     setSucesso(false)
   }
 
@@ -191,9 +169,8 @@ export function VendaForm({ onSuccess }: VendaFormProps) {
   function resetForm() {
     setCabecalho({ ...cabecalhoInicial, data: toDatetimeLocal() })
     setItens([criarItemVazio()])
-    setHouveTroco(false)
-    setValorRecebido('')
-    setParcelas(1)
+    setDividirPagamento(false)
+    setPagamentos([criarPagamentoVazio()])
     setPromocaoVinculadaId(null)
     setError('')
   }
@@ -225,32 +202,21 @@ export function VendaForm({ onSuccess }: VendaFormProps) {
       return
     }
 
-    if (houveTroco && isDinheiro) {
-      if (!valorRecebidoNum || valorRecebidoNum <= 0) {
-        setError('Informe o valor que o cliente passou.')
-        return
-      }
-      if (valorRecebidoNum < valorTotal) {
-        setError('Valor recebido deve ser ≥ total da venda.')
-        return
-      }
-    }
-
-    if (isCredito && parcelas < 1) {
-      setError('Informe o número de parcelas.')
+    const erroPagamento = validarPagamentos(pagamentos, valorTotal, dividirPagamento)
+    if (erroPagamento) {
+      setError(erroPagamento)
       return
     }
+
+    const dadosPagamento = montarDadosPagamentoVenda(pagamentos, valorTotal, dividirPagamento)
 
     const payload: VendaCreate = {
       data: cabecalho.data ? datetimeLocalParaApi(cabecalho.data) : undefined,
       cliente: cabecalho.cliente,
-      forma_pagamento: cabecalho.forma_pagamento,
+      ...dadosPagamento,
       observacao: cabecalho.observacao || undefined,
       promocao_id: promocaoVinculada?.id,
       promocao_nome: promocaoVinculada?.nome,
-      valor_recebido: houveTroco && isDinheiro ? valorRecebidoNum : undefined,
-      troco: houveTroco && isDinheiro ? trocoCalculado : undefined,
-      parcelas: isCredito ? parcelas : undefined,
       itens: itens.map(({ produtoSelecionado, produtoOutro, produto, quantidade, valor_unitario, desconto }) => ({
         produto: resolverNomeProduto(
           { produtoSelecionado, produtoOutro, produto },
@@ -381,50 +347,20 @@ export function VendaForm({ onSuccess }: VendaFormProps) {
           </div>
         </div>
 
-        <div className="venda-compact-row venda-compact-pagamento">
-          <span className="form-label venda-compact-pag-label">Pagamento</span>
-          <div className="venda-compact-pag-btns" role="group" aria-label="Forma de pagamento">
-            {formas.map((forma) => (
-              <button
-                key={forma}
-                type="button"
-                className={`venda-compact-pag ${cabecalho.forma_pagamento === forma ? 'active' : ''} ${forma === 'AV' ? 'is-av' : ''}`}
-                onClick={() => handleCabecalho('forma_pagamento', forma)}
-              >
-                {PAGAMENTO_CURTO[forma] ?? forma}
-              </button>
-            ))}
-          </div>
-          {isAV && <span className="venda-compact-tag-av">Pendente até pagar</span>}
-        </div>
-
-        {isCredito && (
-          <div className="venda-compact-parcelas">
-            <div className="form-group venda-compact-parcelas-field">
-              <label className="form-label">Parcelamento</label>
-              <select
-                className="form-select"
-                value={parcelas}
-                onChange={(e) => {
-                  setParcelas(parseInt(e.target.value, 10) || 1)
-                  setSucesso(false)
-                }}
-              >
-                {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
-                  <option key={n} value={n}>
-                    {n}x {n === 1 ? '(à vista no crédito)' : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {parcelas > 1 && (
-              <p className="venda-compact-parcelas-hint">
-                {parcelas}x de <strong>{formatarMoeda(valorParcela)}</strong> — total{' '}
-                {formatarMoeda(valorTotal)}
-              </p>
-            )}
-          </div>
-        )}
+        <PagamentosVendaSection
+          formas={formas}
+          pagamentos={pagamentos}
+          dividirPagamento={dividirPagamento}
+          valorTotal={valorTotal}
+          onDividirPagamentoChange={(dividir) => {
+            setDividirPagamento(dividir)
+            setSucesso(false)
+          }}
+          onPagamentosChange={(next) => {
+            setPagamentos(next)
+            setSucesso(false)
+          }}
+        />
 
         <div className="venda-compact-itens">
           <div className="venda-compact-itens-head">
@@ -562,51 +498,6 @@ export function VendaForm({ onSuccess }: VendaFormProps) {
             </table>
           </div>
         </div>
-
-        {isDinheiro && (
-          <div className="venda-compact-troco-section">
-            <label className="venda-compact-troco-check">
-              <input
-                type="checkbox"
-                checked={houveTroco}
-                onChange={(e) => {
-                  setHouveTroco(e.target.checked)
-                  if (!e.target.checked) setValorRecebido('')
-                  setSucesso(false)
-                }}
-              />
-              Houve troco?
-            </label>
-            {houveTroco && (
-              <div className="venda-compact-troco-fields">
-                <div className="form-group">
-                  <label className="form-label">Valor recebido (R$)</label>
-                  <input
-                    type="number"
-                    className="form-input"
-                    min={0}
-                    step={0.01}
-                    placeholder="Ex: 150,00"
-                    value={valorRecebido}
-                    onChange={(e) => {
-                      setValorRecebido(e.target.value ? parseFloat(e.target.value) : '')
-                      setSucesso(false)
-                    }}
-                  />
-                </div>
-                <div className="venda-compact-troco-resultado">
-                  <span className="form-label">Troco a devolver</span>
-                  <strong>{formatarMoeda(trocoCalculado)}</strong>
-                  {valorRecebidoNum > 0 && (
-                    <span className="venda-compact-troco-formula">
-                      {formatarMoeda(valorRecebidoNum)} − {formatarMoeda(valorTotal)}
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
 
         <footer className="venda-compact-footer">
           <button type="button" className="btn btn-secondary btn-sm" onClick={resetForm} disabled={loading}>

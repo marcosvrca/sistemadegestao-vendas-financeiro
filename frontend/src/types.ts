@@ -7,6 +7,23 @@ export interface ItemVenda {
   valor?: number
 }
 
+export interface PagamentoVenda {
+  id?: number
+  forma_pagamento: string
+  valor: number
+  troco?: number | null
+  valor_recebido?: number | null
+  parcelas?: number | null
+}
+
+export interface PagamentoVendaCreate {
+  forma_pagamento: string
+  valor: number
+  troco?: number
+  valor_recebido?: number
+  parcelas?: number
+}
+
 export interface Venda {
   id: number
   data: string
@@ -25,6 +42,7 @@ export interface Venda {
   promocao_id?: string | null
   promocao_nome?: string | null
   itens?: ItemVenda[]
+  pagamentos?: PagamentoVenda[]
 }
 
 export interface VendaCreate {
@@ -34,6 +52,7 @@ export interface VendaCreate {
   troco?: number
   valor_recebido?: number
   parcelas?: number
+  pagamentos?: PagamentoVendaCreate[]
   observacao?: string
   promocao_id?: string
   promocao_nome?: string

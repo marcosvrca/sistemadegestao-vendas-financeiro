@@ -7,6 +7,7 @@ FORMAS_PAGAMENTO = ["Dinheiro", "Pix", "Cartão Débito", "Cartão Crédito", "O
 FORMA_PAGAMENTO_AV = "AV"
 FORMA_CARTAO_CREDITO = "Cartão Crédito"
 FORMAS_PAGAMENTO_VENDA = ["Dinheiro", "Pix", "Cartão Débito", FORMA_CARTAO_CREDITO, FORMA_PAGAMENTO_AV, "Outro"]
+FORMA_PAGAMENTO_MISTO = "Misto"
 
 CATEGORIAS_SAIDA = [
     "Fornecedor",
@@ -44,6 +45,27 @@ class ItemVendaResponse(ItemVendaBase):
     model_config = {"from_attributes": True}
 
 
+class PagamentoVendaCreate(BaseModel):
+    forma_pagamento: str
+    valor: float = Field(..., gt=0)
+    troco: float | None = Field(default=None, ge=0)
+    valor_recebido: float | None = Field(default=None, ge=0)
+    parcelas: int | None = Field(default=None, ge=1, le=24)
+
+    @field_validator("forma_pagamento")
+    @classmethod
+    def validar_forma_pagamento(cls, value: str) -> str:
+        if value not in FORMAS_PAGAMENTO_VENDA:
+            raise ValueError(f"Forma de pagamento inválida. Opções: {', '.join(FORMAS_PAGAMENTO_VENDA)}")
+        return value
+
+
+class PagamentoVendaResponse(PagamentoVendaCreate):
+    id: int
+
+    model_config = {"from_attributes": True}
+
+
 class VendaBase(BaseModel):
     data: datetime | None = None
     cliente: str = Field(default="Cliente avulso", max_length=200)
@@ -65,6 +87,7 @@ class VendaBase(BaseModel):
 
 class VendaCreate(VendaBase):
     itens: list[ItemVendaCreate] = Field(default_factory=list, min_length=0)
+    pagamentos: list[PagamentoVendaCreate] | None = None
     produto: str | None = Field(default=None, max_length=200)
     quantidade: int | None = Field(default=None, ge=1)
     valor_unitario: float | None = Field(default=None, ge=0)
@@ -72,11 +95,12 @@ class VendaCreate(VendaBase):
 
     @model_validator(mode="after")
     def montar_itens(self) -> "VendaCreate":
-        if self.forma_pagamento == FORMA_CARTAO_CREDITO:
-            if self.parcelas is None or self.parcelas < 1:
-                raise ValueError("Informe o número de parcelas para cartão de crédito")
-        elif self.parcelas is not None:
-            object.__setattr__(self, "parcelas", None)
+        if not self.pagamentos:
+            if self.forma_pagamento == FORMA_CARTAO_CREDITO:
+                if self.parcelas is None or self.parcelas < 1:
+                    raise ValueError("Informe o número de parcelas para cartão de crédito")
+            elif self.parcelas is not None:
+                object.__setattr__(self, "parcelas", None)
 
         if self.itens:
             return self
@@ -103,6 +127,7 @@ class VendaUpdate(BaseModel):
     observacao: str | None = Field(default=None, max_length=500)
     promocao_id: str | None = Field(default=None, max_length=64)
     promocao_nome: str | None = Field(default=None, max_length=200)
+    pagamentos: list[PagamentoVendaCreate] | None = None
     itens: list[ItemVendaUpdate] | None = None
     produto: str | None = Field(default=None, min_length=1, max_length=200)
     quantidade: int | None = Field(default=None, ge=1)
@@ -118,6 +143,8 @@ class VendaUpdate(BaseModel):
 
     @model_validator(mode="after")
     def validar_parcelas_credito(self):
+        if self.pagamentos is not None:
+            return self
         forma = self.forma_pagamento
         if forma is None:
             return self
@@ -160,6 +187,7 @@ class VendaResponse(VendaBase):
     valor_unitario: float
     desconto: float
     itens: list[ItemVendaResponse] = Field(default_factory=list)
+    pagamentos: list[PagamentoVendaResponse] = Field(default_factory=list)
 
     model_config = {"from_attributes": True}
 

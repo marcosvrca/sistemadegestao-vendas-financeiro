@@ -5,9 +5,11 @@ import {
   formatarMoeda,
   formatarDataCurta,
   FORMA_CARTAO_CREDITO,
+  FORMA_PAGAMENTO_MISTO,
   isVendaAV,
   toDateInput,
 } from '../utils'
+import { formatarPagamentosVenda } from '../pagamentosVendaHelpers'
 import type { Venda, VendasAVPendentes } from '../types'
 import { VendaEditModal } from './VendaEditModal'
 import { VendasAVAlerta } from './VendasAVAlerta'
@@ -327,9 +329,7 @@ export function VendasList({ onRefresh }: VendasListProps) {
                     >
                       {isVendaAV(venda.forma_pagamento)
                         ? 'AV — Pendente'
-                        : venda.forma_pagamento === FORMA_CARTAO_CREDITO && venda.parcelas
-                          ? `${venda.forma_pagamento} · ${venda.parcelas}x`
-                          : venda.forma_pagamento}
+                        : formatarPagamentosVenda(venda)}
                     </span>
                     {venda.promocao_nome && (
                       <span className="badge badge-promo" title="Venda vinculada à promoção">
@@ -363,13 +363,17 @@ export function VendasList({ onRefresh }: VendasListProps) {
                         Troco {formatarMoeda(venda.troco!)}
                       </span>
                     )}
-                    {venda.forma_pagamento === FORMA_CARTAO_CREDITO &&
+                    {venda.forma_pagamento === FORMA_PAGAMENTO_MISTO && venda.pagamentos?.length ? (
+                      <span>{formatarPagamentosVenda(venda)}</span>
+                    ) : (
+                      venda.forma_pagamento === FORMA_CARTAO_CREDITO &&
                       venda.parcelas &&
                       venda.parcelas > 1 && (
                         <span>
                           {venda.parcelas}x de {formatarMoeda(venda.valor / venda.parcelas)}
                         </span>
-                      )}
+                      )
+                    )}
                   </div>
 
                   {multiItens && venda.itens && (

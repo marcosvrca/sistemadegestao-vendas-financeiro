@@ -6,17 +6,18 @@ from fastapi import Depends, FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from openpyxl import Workbook
-from sqlalchemy import desc, extract, func, text
+from sqlalchemy import desc, extract, func, or_, text
 from sqlalchemy.orm import Session, joinedload
 
 from database import engine, get_db, migrar_banco
 from excel_import import CAMPOS_OBRIGATORIOS, CAMPOS_OPCIONAIS, parsear_planilha
-from models import CaixaDiario, ItemVenda, Saida, Venda
+from models import CaixaDiario, ItemVenda, PagamentoVenda, Saida, Venda
 from schemas import (
     DashboardKPIs,
     FORMAS_PAGAMENTO,
     FORMAS_PAGAMENTO_VENDA,
     FORMA_PAGAMENTO_AV,
+    PagamentoVendaCreate,
     ImportacaoErro,
     ImportacaoIgnorada,
     ImportacaoResultado,
@@ -55,6 +56,12 @@ from dashboard_filtros import (
 from dashboard_confrontar import confrontar_periodos, obter_melhor_dia
 from av_utils import registrar_quitacao_av
 from venda_utils import calcular_valor_item, normalizar_data_venda, sincronizar_cabecalho
+from venda_pagamentos_utils import (
+    aplicar_pagamentos_venda,
+    iter_valores_por_forma,
+    resolver_pagamentos_create,
+    resolver_pagamentos_update,
+)
 from estoque_api import router as estoque_router
 from contas_receber_api import router as contas_receber_router
 from contas_pagar_api import router as contas_pagar_router
@@ -125,7 +132,10 @@ def listar_vendas(
     data_fim: datetime | None = Query(default=None),
     limite: int = Query(default=100, ge=1, le=500),
 ):
-    query = db.query(Venda).options(joinedload(Venda.itens))
+    query = db.query(Venda).options(
+        joinedload(Venda.itens),
+        joinedload(Venda.pagamentos),
+    )
 
     if busca:
         termo = f"%{busca}%"
@@ -136,7 +146,15 @@ def listar_vendas(
         )
 
     if forma_pagamento:
-        query = query.filter(Venda.forma_pagamento == forma_pagamento)
+        if forma_pagamento == "Misto":
+            query = query.filter(Venda.forma_pagamento == "Misto")
+        else:
+            query = query.filter(
+                or_(
+                    Venda.forma_pagamento == forma_pagamento,
+                    Venda.pagamentos.any(PagamentoVenda.forma_pagamento == forma_pagamento),
+                )
+            )
 
     if data_inicio:
         query = query.filter(Venda.data >= data_inicio)
@@ -325,7 +343,7 @@ async def importar_excel(
 def obter_venda(venda_id: int, db: Session = Depends(get_db)):
     venda = (
         db.query(Venda)
-        .options(joinedload(Venda.itens))
+        .options(joinedload(Venda.itens), joinedload(Venda.pagamentos))
         .filter(Venda.id == venda_id)
         .first()
     )
@@ -360,6 +378,13 @@ def criar_venda(venda: VendaCreate, db: Session = Depends(get_db)):
     db.flush()
     sincronizar_cabecalho(nova_venda, itens)
 
+    try:
+        pagamentos_data = resolver_pagamentos_create(venda, nova_venda.valor)
+        aplicar_pagamentos_venda(db, nova_venda, pagamentos_data, nova_venda.valor)
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
     aplicar_itens_venda_estoque(
         db,
         itens,
@@ -376,7 +401,7 @@ def criar_venda(venda: VendaCreate, db: Session = Depends(get_db)):
 def atualizar_venda(venda_id: int, dados: VendaUpdate, db: Session = Depends(get_db)):
     venda = (
         db.query(Venda)
-        .options(joinedload(Venda.itens))
+        .options(joinedload(Venda.itens), joinedload(Venda.pagamentos))
         .filter(Venda.id == venda_id)
         .first()
     )
@@ -386,14 +411,21 @@ def atualizar_venda(venda_id: int, dados: VendaUpdate, db: Session = Depends(get
     forma_anterior = venda.forma_pagamento
     itens_antigos = list(venda.itens) if venda.itens else []
 
-    campos = dados.model_dump(exclude_unset=True, exclude={"itens", "produto", "quantidade", "valor_unitario", "desconto"})
+    campos = dados.model_dump(
+        exclude_unset=True,
+        exclude={
+            "itens",
+            "pagamentos",
+            "produto",
+            "quantidade",
+            "valor_unitario",
+            "desconto",
+        },
+    )
     if "data" in campos:
         campos["data"] = normalizar_data_venda(campos["data"])
     for campo, valor in campos.items():
         setattr(venda, campo, valor)
-
-    if "forma_pagamento" in campos:
-        registrar_quitacao_av(venda, forma_anterior)
 
     if dados.itens is not None:
         db.query(ItemVenda).filter(ItemVenda.venda_id == venda_id).delete()
@@ -424,6 +456,28 @@ def atualizar_venda(venda_id: int, dados: VendaUpdate, db: Session = Depends(get
                 item.desconto = dados.desconto
             item.valor = calcular_valor_item(item.quantidade, item.valor_unitario, item.desconto)
             sincronizar_cabecalho(venda, venda.itens)
+
+    pagamentos_data = resolver_pagamentos_update(dados, venda, venda.valor)
+    if pagamentos_data is None and venda.pagamentos and len(venda.pagamentos) == 1:
+        pagamento = venda.pagamentos[0]
+        pagamentos_data = [
+            PagamentoVendaCreate(
+                forma_pagamento=pagamento.forma_pagamento,
+                valor=venda.valor,
+                troco=pagamento.troco,
+                valor_recebido=pagamento.valor_recebido,
+                parcelas=pagamento.parcelas,
+            )
+        ]
+    if pagamentos_data is not None:
+        try:
+            aplicar_pagamentos_venda(db, venda, pagamentos_data, venda.valor)
+        except ValueError as exc:
+            db.rollback()
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        registrar_quitacao_av(venda, forma_anterior)
+    elif "forma_pagamento" in campos:
+        registrar_quitacao_av(venda, forma_anterior)
 
     db.commit()
     db.refresh(venda)
@@ -550,13 +604,17 @@ def vendas_por_forma_pagamento(
     db: Session = Depends(get_db),
     filtros: FiltrosDashboard = Depends(montar_filtros_dashboard),
 ):
-    vendas = filtrar_vendas(db.query(Venda), filtros).all()
+    vendas = (
+        filtrar_vendas(db.query(Venda).options(joinedload(Venda.pagamentos)), filtros)
+        .all()
+    )
     agrupado: dict[str, dict[str, float | int]] = {}
     for venda in vendas:
-        if venda.forma_pagamento not in agrupado:
-            agrupado[venda.forma_pagamento] = {"total": 0.0, "quantidade": 0}
-        agrupado[venda.forma_pagamento]["total"] += venda.valor
-        agrupado[venda.forma_pagamento]["quantidade"] += 1
+        for forma, valor in iter_valores_por_forma(venda):
+            if forma not in agrupado:
+                agrupado[forma] = {"total": 0.0, "quantidade": 0}
+            agrupado[forma]["total"] += valor
+            agrupado[forma]["quantidade"] += 1
 
     return [
         VendaPorFormaPagamento(

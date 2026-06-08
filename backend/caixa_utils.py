@@ -1,9 +1,10 @@
 from datetime import date, datetime, timedelta
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from av_utils import aplicar_filtro_vendas_financeiras, data_efetiva_venda
 from models import Saida, Venda
+from venda_pagamentos_utils import iter_valores_por_forma
 
 FORMA_DINHEIRO = "Dinheiro"
 
@@ -19,7 +20,10 @@ def calcular_resumo_sistema(db: Session, dia: date) -> dict:
 
     ref = data_efetiva_venda()
     vendas = (
-        aplicar_filtro_vendas_financeiras(db.query(Venda), None)
+        aplicar_filtro_vendas_financeiras(
+            db.query(Venda).options(joinedload(Venda.pagamentos)),
+            None,
+        )
         .filter(ref >= dt_inicio, ref <= dt_fim)
         .all()
     )
@@ -30,13 +34,16 @@ def calcular_resumo_sistema(db: Session, dia: date) -> dict:
     )
 
     faturamento = sum(v.valor for v in vendas)
-    vendas_dinheiro = sum(v.valor for v in vendas if v.forma_pagamento == FORMA_DINHEIRO)
+    vendas_dinheiro = 0.0
     total_saidas = sum(s.valor for s in saidas)
     saidas_dinheiro = sum(s.valor for s in saidas if s.forma_pagamento == FORMA_DINHEIRO)
 
     por_forma: dict[str, float] = {}
     for venda in vendas:
-        por_forma[venda.forma_pagamento] = por_forma.get(venda.forma_pagamento, 0.0) + venda.valor
+        for forma, valor in iter_valores_por_forma(venda):
+            por_forma[forma] = por_forma.get(forma, 0.0) + valor
+            if forma == FORMA_DINHEIRO:
+                vendas_dinheiro += valor
 
     return {
         "faturamento": round(faturamento, 2),

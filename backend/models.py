@@ -31,6 +31,29 @@ class Venda(Base):
         cascade="all, delete-orphan",
         order_by="ItemVenda.id",
     )
+    pagamentos: Mapped[list["PagamentoVenda"]] = relationship(
+        back_populates="venda",
+        cascade="all, delete-orphan",
+        order_by="PagamentoVenda.id",
+    )
+
+
+class PagamentoVenda(Base):
+    __tablename__ = "pagamentos_venda"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    venda_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("vendas.id", ondelete="CASCADE"),
+        index=True,
+    )
+    forma_pagamento: Mapped[str] = mapped_column(String(50), index=True)
+    valor: Mapped[float] = mapped_column(Float)
+    troco: Mapped[float | None] = mapped_column(Float, nullable=True)
+    valor_recebido: Mapped[float | None] = mapped_column(Float, nullable=True)
+    parcelas: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    venda: Mapped["Venda"] = relationship(back_populates="pagamentos")
 
 
 class ItemVenda(Base):

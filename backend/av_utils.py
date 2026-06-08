@@ -5,8 +5,10 @@ from datetime import datetime
 from sqlalchemy import func
 from sqlalchemy.orm import Query as SqlQuery
 
-from models import Venda
-from schemas import FORMA_PAGAMENTO_AV
+from sqlalchemy import or_
+
+from models import PagamentoVenda, Venda
+from schemas import FORMA_PAGAMENTO_AV, FORMA_PAGAMENTO_MISTO
 
 
 def data_efetiva_venda():
@@ -34,6 +36,13 @@ def aplicar_filtro_vendas_financeiras(query: SqlQuery, forma_pagamento: str | No
     if forma_pagamento == FORMA_PAGAMENTO_AV:
         return query.filter(Venda.forma_pagamento == FORMA_PAGAMENTO_AV)
     query = query.filter(Venda.forma_pagamento != FORMA_PAGAMENTO_AV)
+    if forma_pagamento == FORMA_PAGAMENTO_MISTO:
+        return query.filter(Venda.forma_pagamento == FORMA_PAGAMENTO_MISTO)
     if forma_pagamento:
-        query = query.filter(Venda.forma_pagamento == forma_pagamento)
+        return query.filter(
+            or_(
+                Venda.forma_pagamento == forma_pagamento,
+                Venda.pagamentos.any(PagamentoVenda.forma_pagamento == forma_pagamento),
+            )
+        )
     return query

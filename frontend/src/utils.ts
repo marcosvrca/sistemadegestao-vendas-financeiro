@@ -1,5 +1,6 @@
 export const FORMA_PAGAMENTO_AV = 'AV'
 export const FORMA_CARTAO_CREDITO = 'Cartão Crédito'
+export const FORMA_PAGAMENTO_MISTO = 'Misto'
 
 export function isVendaAV(formaPagamento: string): boolean {
   return formaPagamento === FORMA_PAGAMENTO_AV

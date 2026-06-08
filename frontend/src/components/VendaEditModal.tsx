@@ -6,9 +6,16 @@ import {
   calcularValorTotal,
   datetimeLocalParaApi,
   formatarMoeda,
-  FORMA_CARTAO_CREDITO,
+  FORMA_PAGAMENTO_AV,
 } from '../utils'
 import type { ItemVenda, ProdutoOpcao, Venda, VendaCreate } from '../types'
+import {
+  montarDadosPagamentoVenda,
+  validarPagamentos,
+  vendaParaPagamentosForm,
+  type PagamentoForm,
+} from '../pagamentosVendaHelpers'
+import { PagamentosVendaSection } from './PagamentosVendaSection'
 import { buscarProdutoOpcao } from '../produtoEstoqueHelpers'
 
 interface VendaEditModalProps {
@@ -44,15 +51,17 @@ function itensParaForm(venda: Venda): ItemForm[] {
 export function VendaEditModal({ venda, onClose, onSuccess }: VendaEditModalProps) {
   const [data, setData] = useState(apiDatetimeToDatetimeLocal(venda.data))
   const [cliente, setCliente] = useState(venda.cliente)
-  const [formaPagamento, setFormaPagamento] = useState(venda.forma_pagamento)
   const [observacao, setObservacao] = useState(venda.observacao ?? '')
   const [itens, setItens] = useState<ItemForm[]>(() => itensParaForm(venda))
   const [formas, setFormas] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [houveTroco, setHouveTroco] = useState(Boolean(venda.troco || venda.valor_recebido))
-  const [valorRecebido, setValorRecebido] = useState<number | ''>(venda.valor_recebido ?? '')
-  const [parcelas, setParcelas] = useState(venda.parcelas ?? 1)
+  const [dividirPagamento, setDividirPagamento] = useState(
+    () => vendaParaPagamentosForm(venda).dividirPagamento,
+  )
+  const [pagamentos, setPagamentos] = useState<PagamentoForm[]>(
+    () => vendaParaPagamentosForm(venda).pagamentos,
+  )
   const [opcoesProduto, setOpcoesProduto] = useState<ProdutoOpcao[]>([])
 
   useEffect(() => {
@@ -63,12 +72,11 @@ export function VendaEditModal({ venda, onClose, onSuccess }: VendaEditModalProp
   useEffect(() => {
     setData(apiDatetimeToDatetimeLocal(venda.data))
     setCliente(venda.cliente)
-    setFormaPagamento(venda.forma_pagamento)
     setObservacao(venda.observacao ?? '')
     setItens(itensParaForm(venda))
-    setHouveTroco(Boolean(venda.troco || venda.valor_recebido))
-    setValorRecebido(venda.valor_recebido ?? '')
-    setParcelas(venda.parcelas ?? 1)
+    const pagamentoForm = vendaParaPagamentosForm(venda)
+    setDividirPagamento(pagamentoForm.dividirPagamento)
+    setPagamentos(pagamentoForm.pagamentos)
     setError('')
   }, [venda])
 
@@ -76,15 +84,6 @@ export function VendaEditModal({ venda, onClose, onSuccess }: VendaEditModalProp
     (acc, item) => acc + calcularValorTotal(item.quantidade, item.valor_unitario, item.desconto),
     0,
   )
-  const isDinheiro = formaPagamento === 'Dinheiro'
-  const isCredito = formaPagamento === FORMA_CARTAO_CREDITO
-  const valorParcela = isCredito && parcelas > 0 ? valorTotal / parcelas : 0
-  const valorRecebidoNum = typeof valorRecebido === 'number' ? valorRecebido : 0
-  const trocoCalculado =
-    houveTroco && valorRecebidoNum > 0
-      ? Math.max(valorRecebidoNum - valorTotal, 0)
-      : 0
-
   function atualizarItem(key: string, field: keyof ItemVenda, value: string | number) {
     setItens((prev) =>
       prev.map((item) => (item.key === key ? { ...item, [field]: value } : item)),
@@ -127,21 +126,21 @@ export function VendaEditModal({ venda, onClose, onSuccess }: VendaEditModalProp
       return
     }
 
-    if (houveTroco && isDinheiro && valorRecebidoNum < valorTotal) {
-      setError('O valor recebido deve ser maior ou igual ao total da venda')
+    const erroPagamento = validarPagamentos(pagamentos, valorTotal, dividirPagamento)
+    if (erroPagamento) {
+      setError(erroPagamento)
       return
     }
 
     setLoading(true)
 
+    const dadosPagamento = montarDadosPagamentoVenda(pagamentos, valorTotal, dividirPagamento)
+
     const payload: Partial<VendaCreate> = {
       data: datetimeLocalParaApi(data),
       cliente,
-      forma_pagamento: formaPagamento,
+      ...dadosPagamento,
       observacao: observacao || undefined,
-      troco: houveTroco && isDinheiro ? trocoCalculado : null,
-      valor_recebido: houveTroco && isDinheiro ? valorRecebidoNum : null,
-      parcelas: isCredito ? parcelas : null,
       itens: itens.map(({ produto, quantidade, valor_unitario, desconto }) => ({
         produto: produto.trim(),
         quantidade,
@@ -189,64 +188,27 @@ export function VendaEditModal({ venda, onClose, onSuccess }: VendaEditModalProp
               />
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Forma de Pagamento</label>
-              <select
-                className="form-select"
-                value={formaPagamento}
-                onChange={(e) => {
-                  const val = e.target.value
-                  setFormaPagamento(val)
-                  if (val !== 'Dinheiro') {
-                    setHouveTroco(false)
-                    setValorRecebido('')
-                  }
-                  if (val !== FORMA_CARTAO_CREDITO) {
-                    setParcelas(1)
-                  }
-                }}
-                required
-              >
-                {formas.map((f) => (
-                  <option key={f} value={f}>
-                    {f === 'AV' ? 'AV — Cliente paga depois' : f}
-                  </option>
-                ))}
-              </select>
-              {formaPagamento === 'AV' ? (
-                <p className="av-form-aviso">
-                  Pagamento pendente — não entra no faturamento até quitar. Altere a forma de
-                  pagamento quando o cliente pagar.
-                </p>
-              ) : (
-                venda.forma_pagamento === 'AV' && (
-                  <p className="av-form-aviso" style={{ color: 'var(--success, #22c55e)' }}>
-                    Ao salvar, a venda entra no faturamento com a data de pagamento de hoje.
-                  </p>
-                )
-              )}
-            </div>
+            <PagamentosVendaSection
+              compact
+              formas={formas}
+              pagamentos={pagamentos}
+              dividirPagamento={dividirPagamento}
+              valorTotal={valorTotal}
+              onDividirPagamentoChange={setDividirPagamento}
+              onPagamentosChange={setPagamentos}
+            />
 
-            {isCredito && (
-              <div className="form-group">
-                <label className="form-label">Parcelamento</label>
-                <select
-                  className="form-select"
-                  value={parcelas}
-                  onChange={(e) => setParcelas(parseInt(e.target.value, 10) || 1)}
-                >
-                  {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
-                    <option key={n} value={n}>
-                      {n}x
-                    </option>
-                  ))}
-                </select>
-                {parcelas > 1 && (
-                  <p className="venda-compact-parcelas-hint" style={{ marginTop: '0.35rem' }}>
-                    {parcelas}x de {formatarMoeda(valorParcela)}
-                  </p>
-                )}
-              </div>
+            {!dividirPagamento && pagamentos[0]?.forma_pagamento === FORMA_PAGAMENTO_AV ? (
+              <p className="av-form-aviso full-width">
+                Pagamento pendente — não entra no faturamento até quitar. Altere a forma de
+                pagamento quando o cliente pagar.
+              </p>
+            ) : (
+              venda.forma_pagamento === FORMA_PAGAMENTO_AV && (
+                <p className="av-form-aviso full-width" style={{ color: 'var(--success, #22c55e)' }}>
+                  Ao salvar, a venda entra no faturamento com a data de pagamento de hoje.
+                </p>
+              )
             )}
 
             <div className="form-group full-width">
@@ -364,42 +326,6 @@ export function VendaEditModal({ venda, onClose, onSuccess }: VendaEditModalProp
                 ))}
               </div>
             </div>
-
-            {isDinheiro && (
-              <div className="form-group full-width troco-section">
-                <label className="import-checkbox">
-                  <input
-                    type="checkbox"
-                    checked={houveTroco}
-                    onChange={(e) => {
-                      setHouveTroco(e.target.checked)
-                      if (!e.target.checked) setValorRecebido('')
-                    }}
-                  />
-                  Houve troco?
-                </label>
-                {houveTroco && (
-                  <div className="troco-fields">
-                    <div className="form-group">
-                      <label className="form-label">Valor que o cliente passou (R$)</label>
-                      <input
-                        type="number"
-                        className="form-input"
-                        min={0}
-                        step={0.01}
-                        value={valorRecebido}
-                        onChange={(e) =>
-                          setValorRecebido(e.target.value ? parseFloat(e.target.value) : '')
-                        }
-                      />
-                    </div>
-                    <div className="form-preview troco-preview">
-                      <span className="form-preview-label">Troco: {formatarMoeda(trocoCalculado)}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
 
             <div className="form-group full-width">
               <label className="form-label">Observação (opcional)</label>

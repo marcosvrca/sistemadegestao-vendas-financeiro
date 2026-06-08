@@ -37,6 +37,7 @@ def migrar_banco() -> None:
         Categoria,
         ItemVenda,
         MovimentacaoEstoque,
+        PagamentoVenda,
         Produto,
         Saida,
         Venda,
@@ -127,5 +128,23 @@ def migrar_banco() -> None:
 
         if db.query(Produto).count() == 0 and db.query(ItemVenda).count() > 0:
             seed_produtos_de_vendas(db)
+    finally:
+        db.close()
+
+    db = SessionLocal()
+    try:
+        if db.query(PagamentoVenda).count() == 0 and db.query(Venda).count() > 0:
+            for venda in db.query(Venda).all():
+                db.add(
+                    PagamentoVenda(
+                        venda_id=venda.id,
+                        forma_pagamento=venda.forma_pagamento,
+                        valor=venda.valor,
+                        troco=venda.troco,
+                        valor_recebido=venda.valor_recebido,
+                        parcelas=venda.parcelas,
+                    )
+                )
+            db.commit()
     finally:
         db.close()
