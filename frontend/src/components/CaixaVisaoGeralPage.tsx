@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Wallet, Lock, AlertCircle, TrendingUp } from 'lucide-react'
+import { Wallet, Lock, AlertCircle, TrendingUp, Pencil } from 'lucide-react'
 import { api } from '../api'
 import { formatarMoeda, formatarDataIso, toDateInput } from '../utils'
 import { KPICard } from './KPICard'
+import { EditarFechamentoCaixaModal } from './EditarFechamentoCaixaModal'
 import type { CaixaDiario, CaixaDiarioListItem } from '../types'
 import type { Pagina } from '../navigation'
 
@@ -16,26 +17,42 @@ export function CaixaVisaoGeralPage({ onNavigate }: CaixaVisaoGeralPageProps) {
   const [historico, setHistorico] = useState<CaixaDiarioListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState('')
+  const [editando, setEditando] = useState<CaixaDiario | null>(null)
+  const [abrindoEdicao, setAbrindoEdicao] = useState(false)
+
+  async function carregar() {
+    setLoading(true)
+    setErro('')
+    try {
+      const [dia, lista] = await Promise.all([
+        api.getCaixaDia(hoje),
+        api.getCaixaLista(30),
+      ])
+      setCaixaHoje(dia)
+      setHistorico(lista)
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : 'Erro ao carregar visão do caixa')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    async function carregar() {
-      setLoading(true)
-      setErro('')
-      try {
-        const [dia, lista] = await Promise.all([
-          api.getCaixaDia(hoje),
-          api.getCaixaLista(30),
-        ])
-        setCaixaHoje(dia)
-        setHistorico(lista)
-      } catch (err) {
-        setErro(err instanceof Error ? err.message : 'Erro ao carregar visão do caixa')
-      } finally {
-        setLoading(false)
-      }
-    }
     carregar()
   }, [hoje])
+
+  async function abrirEdicaoFechamento(item: CaixaDiarioListItem) {
+    setAbrindoEdicao(true)
+    setErro('')
+    try {
+      const dia = await api.getCaixaDia(item.data.slice(0, 10))
+      setEditando(dia)
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : 'Erro ao carregar fechamento')
+    } finally {
+      setAbrindoEdicao(false)
+    }
+  }
 
   const stats = useMemo(() => {
     const abertos = historico.filter((h) => !h.fechado_em)
@@ -147,6 +164,7 @@ export function CaixaVisaoGeralPage({ onNavigate }: CaixaVisaoGeralPageProps) {
                   <th>Inicial</th>
                   <th>Faturamento</th>
                   <th>Diferença</th>
+                  <th>Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -170,6 +188,21 @@ export function CaixaVisaoGeralPage({ onNavigate }: CaixaVisaoGeralPageProps) {
                         '—'
                       )}
                     </td>
+                    <td className="actions">
+                      {item.fechado_em ? (
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => abrirEdicaoFechamento(item)}
+                          disabled={abrindoEdicao}
+                          title="Editar fechamento"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -177,6 +210,14 @@ export function CaixaVisaoGeralPage({ onNavigate }: CaixaVisaoGeralPageProps) {
           </div>
         )}
       </div>
+
+      {editando && (
+        <EditarFechamentoCaixaModal
+          caixa={editando}
+          onClose={() => setEditando(null)}
+          onSuccess={carregar}
+        />
+      )}
     </div>
   )
 }

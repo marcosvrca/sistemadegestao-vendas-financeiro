@@ -928,6 +928,24 @@ def registrar_fechamento_caixa(dados: CaixaFechamentoCreate, db: Session = Depen
     return montar_resposta_caixa(db, dados.data, registro)
 
 
+@app.put("/api/caixa/fechamento", response_model=CaixaDiarioResponse)
+def atualizar_fechamento_caixa(dados: CaixaFechamentoCreate, db: Session = Depends(get_db)):
+    registro = db.query(CaixaDiario).filter(CaixaDiario.data == dados.data).first()
+
+    if not registro or not registro.fechado_em:
+        raise HTTPException(
+            status_code=400,
+            detail="Só é possível editar o fechamento de um caixa já fechado.",
+        )
+
+    registro.valor_fechamento = round(dados.valor_fechamento, 2)
+    registro.observacao_fechamento = dados.observacao
+
+    db.commit()
+    db.refresh(registro)
+    return montar_resposta_caixa(db, dados.data, registro)
+
+
 @app.delete("/api/caixa/{caixa_id}", status_code=204)
 def excluir_registro_caixa(caixa_id: int, db: Session = Depends(get_db)):
     registro = db.query(CaixaDiario).filter(CaixaDiario.id == caixa_id).first()

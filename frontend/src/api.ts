@@ -188,6 +188,13 @@ export const api = {
       body: JSON.stringify(dados),
     }),
 
+  atualizarFechamentoCaixa: (dados: CaixaFechamentoCreate) =>
+    fetchJson<CaixaDiario>(`${API}/caixa/fechamento`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dados),
+    }),
+
   deleteCaixa: (id: number) =>
     fetchJson<void>(`${API}/caixa/${id}`, { method: 'DELETE' }),
 
